@@ -278,21 +278,25 @@ class MainWindow(QMainWindow):
         self.main_return_obj = QWidget()
         self.videorecord_page_obj = QWidget()
         self.videocompare_page_obj = QWidget()
+        self.history_page_obj = QWidget()
 
         self.lyVideoPlayer_obj1 = lyVideoPlayer()
         self.lyVideoPlayer_obj2 = lyVideoPlayer()
+        self.lyVideoPlayer_obj3 = lyVideoPlayer()
 
         loadUi('main_page.ui', self.main_page_obj)
         loadUi('config_page.ui', self.config_page_obj)
         loadUi('main_return.ui',self.main_return_obj)
         loadUi('videorecord_page.ui',self.videorecord_page_obj)
         loadUi('videocompare_page.ui',self.videocompare_page_obj)
+        loadUi('history_page.ui',self.history_page_obj)
 
         # 添加到容器
         self.stacked_pages.addWidget(self.main_page_obj)   # 0 主页
         self.stacked_pages.addWidget(self.config_page_obj) # 1  配置页
         self.stacked_pages.addWidget(self.videorecord_page_obj) # 2 动作录制
         self.stacked_pages.addWidget(self.videocompare_page_obj) # 3 动作对比录制页
+        self.stacked_pages.addWidget(self.history_page_obj) #4 历史动作
 
         self.main_layout.addWidget(self.main_return_obj,1)
         self.main_layout.addWidget(self.stacked_pages,15)
@@ -392,7 +396,16 @@ class MainWindow(QMainWindow):
         layout_2 = QVBoxLayout()
         layout_2.addWidget(self.lyVideoPlayer_obj2)
         self.videocompare_page_obj.widget_4.setLayout(layout_2)
+        # 第二个录制的要开启AI检测的
         self.lyVideoPlayer_obj2.setflag_startai()
+
+        layout_3 = QVBoxLayout()
+        layout_3.addWidget(self.lyVideoPlayer_obj3)
+        self.history_page_obj.widget.setLayout(layout_3)
+
+        # 跳转到历史
+        self.main_page_obj.toolButton_history.clicked.connect(self.transfer_page)
+
 
         self.frameAI_thread.setsavepath(self.configresult['ly']['video_path'])
         self.lyVideoPlayer_obj1.setsavepath(self.configresult['ly']['video_path'])
@@ -401,13 +414,12 @@ class MainWindow(QMainWindow):
         # 录制完之后传递uuid
         self.lyVideoPlayer_obj2.uuid_signal.connect(self.compare_page_uuid)
 
+        # 对比俩个视频json
         self.videocompare_page_obj.pushButton_compare.clicked.connect(self.compare_Twovideo)
 
         # 第二个视频+播放按钮
         # self.lyVideoPlayer_obj2.pushButton_3
         #
-
-
 
         # 隐藏导入
         self.videorecord_page_obj.pushButton_import.hide()
@@ -423,11 +435,13 @@ class MainWindow(QMainWindow):
         elif tmpbtn.text() == "修改配置":
             self.stacked_pages.setCurrentIndex(1)
         elif tmpbtn.text() == "动作管理":
-           self.stacked_pages.setCurrentIndex(2)
+            self.stacked_pages.setCurrentIndex(2)
         elif tmpbtn.text() == "开始测评":
             self.stacked_pages.setCurrentIndex(3)
             self.stream_thread.stop()
             self.frameAI_thread.stop()
+        elif tmpbtn.text()=="历史记录":
+            self.stacked_pages.setCurrentIndex(4)
 
 
     def setbtn_color(self):
@@ -466,14 +480,35 @@ class MainWindow(QMainWindow):
         self.videocompare_page_obj.lineEdit_8.setText(os.path.join(self.configresult['ly']['video_path'],tmpuuid + ".mp4"))
 
     def compare_Twovideo(self):
-
         videopath1 =  self.videocompare_page_obj.lineEdit_4.text()
         videopath2 = self.videocompare_page_obj.lineEdit_8.text()
         if os.path.exists(videopath1) and os.path.exists(videopath2):
             jsonpath1 = videopath1[:-4]+ ".json"
             jsonpath2 =videopath2[:-4]+ ".json"
             if os.path.exists(jsonpath1) and os.path.exists(jsonpath2):
-                pass
+                uuid1 = self.videocompare_page_obj.lineEdit_2.text()
+                uuid2 = self.videocompare_page_obj.lineEdit_6.text()
+                action = self.videorecord_page_obj.lineEdit.text()
+                timestamp = datetime.now().strftime("%Y-%m-%d  %H:%M:%S")
+                query = QSqlQuery()
+                # 插入数据
+                query.prepare("INSERT INTO comparehistory (uuidstandard, uuidcontrast, action,time) VALUES (?, ?, ?, ?)")
+                query.addBindValue(uuid1)
+                query.addBindValue(uuid2)
+                query.addBindValue(action)
+                query.addBindValue(timestamp)
+
+                """
+                编写dtw 对比俩个视频中关键点的差异给出结论
+                """
+
+
+                if not query.exec():
+                    print("插入失败:", query.lastError().text())
+                else:
+                    print("插入成功一条对比数据")
+                    self.statusBar().showMessage("数据插入成功",5000)
+
 
     def set_main_ui_time(self):
         self.timer = QTimer(self)
@@ -773,7 +808,6 @@ class MainWindow(QMainWindow):
 
         self.stacked_pages.setCurrentIndex(3)
         self.statusBar().showMessage("开始测评")
-
 
 
     def closeEvent(self, event):
