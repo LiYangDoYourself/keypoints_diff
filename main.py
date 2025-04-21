@@ -9,14 +9,14 @@ import queue
 import uuid
 import cv2
 from PyQt5.QtCore import QTimer, QDateTime, Qt, QThread, pyqtSignal
-from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QStackedWidget, QVBoxLayout
+from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QStackedWidget, QVBoxLayout, QDesktopWidget
 from PyQt5.uic import loadUi
 from PyQt5.QtSql import QSqlDatabase, QSqlTableModel, QSqlQueryModel, QSqlQuery
 from PyQt5.QtWidgets import QTableView, QMessageBox
 
 from lyVideoPlayer import *
 
-
+from lyDataBase import DBWidget
 # from ultralytics import YOLO
 # model_detect = YOLO("best.pt")   # yolov8-x6-pose.pt
 #
@@ -179,10 +179,12 @@ class VideoStreamThread(QThread):
         return f"{int(hours):02d}:{int(minutes):02d}:{int(seconds):02d}"
     def run(self):
         try:
+
             self.cap = cv2.VideoCapture(self.path)
             if not self.cap.isOpened():
                 print("无法打开摄像头")
-                exit()
+                QMessageBox.information(self, "提示", "视频无法连接！")
+                return
 
             self._timeflag=0   # 用来显示录制了多少秒
 
@@ -216,7 +218,6 @@ class VideoStreamThread(QThread):
                             self.end_time = time.time()
                             self.recordtime_singal.emit(self.format_time(self.end_time-self.start_time))
 
-
                         i += 1
                     else:
                         break
@@ -224,6 +225,9 @@ class VideoStreamThread(QThread):
                     break  # 暂停时降低CPU占用
         except Exception as e:
             print(e)
+
+
+        self.stoprecord_signal.emit()
 
     def pause(self):
         """暂停视频流（保持线程运行但不发送帧）"""
@@ -239,7 +243,7 @@ class VideoStreamThread(QThread):
         """完全停止线程"""
         self._running = False
         self._paused = False
-        self.wait()
+        # self.wait()
         print(f"视频已停止")
 
     def setstartrecord(self):
@@ -257,8 +261,13 @@ class VideoStreamThread(QThread):
 class MainWindow(QMainWindow):
     startrecord_signal = pyqtSignal()
     stoprecord_signal = pyqtSignal()
+
+    startcompare_signal = pyqtSignal(list)
+
     def __init__(self):
         super(MainWindow, self).__init__()
+        self.screen_rect = QApplication.primaryScreen().geometry()
+        self.statusBar().show()
 
         self.current_page = 1
         self.total_pages = 0
@@ -280,9 +289,13 @@ class MainWindow(QMainWindow):
         self.videocompare_page_obj = QWidget()
         self.history_page_obj = QWidget()
 
+
         self.lyVideoPlayer_obj1 = lyVideoPlayer()
         self.lyVideoPlayer_obj2 = lyVideoPlayer()
         self.lyVideoPlayer_obj3 = lyVideoPlayer()
+
+        # 数据库页面
+        self.database_page_obj = DBWidget()
 
         loadUi('main_page.ui', self.main_page_obj)
         loadUi('config_page.ui', self.config_page_obj)
@@ -290,6 +303,10 @@ class MainWindow(QMainWindow):
         loadUi('videorecord_page.ui',self.videorecord_page_obj)
         loadUi('videocompare_page.ui',self.videocompare_page_obj)
         loadUi('history_page.ui',self.history_page_obj)
+
+
+
+
 
         # 添加到容器
         self.stacked_pages.addWidget(self.main_page_obj)   # 0 主页
@@ -333,7 +350,7 @@ class MainWindow(QMainWindow):
         self.main_page_obj.toolButton_action.clicked.connect(self.transfer_page)
 
         # 刷新显示tableview
-        self.videorecord_page_obj.pushButton_refresh.clicked.connect(lambda:self.videorecord_page_obj.tableView.model().select() )
+        self.videorecord_page_obj.pushButton_refresh.clicked.connect(lambda:self.videorecord_page_obj.tableView.model().select())
 
         #删除某一行数据
         self.videorecord_page_obj.pushButton_delete.clicked.connect(self.delete_selected_rows)
@@ -385,9 +402,6 @@ class MainWindow(QMainWindow):
         self.videorecord_page_obj.stoprecord_pushButton.clicked.connect(self.setbtn_color)
         self.main_return_obj.pushButton_config_return.clicked.connect(self.setbtn_color)
 
-        # 启动对比
-        self.videorecord_page_obj.pushButton_compare.clicked.connect(self.compare_Twovideo)
-
         # 循环播放视频录入进去
         layout_1 = QVBoxLayout()
         layout_1.addWidget(self.lyVideoPlayer_obj1)
@@ -399,9 +413,14 @@ class MainWindow(QMainWindow):
         # 第二个录制的要开启AI检测的
         self.lyVideoPlayer_obj2.setflag_startai()
 
+        # 历史页面添加 播放器 和 数据库
         layout_3 = QVBoxLayout()
         layout_3.addWidget(self.lyVideoPlayer_obj3)
         self.history_page_obj.widget.setLayout(layout_3)
+
+        layout_4 = QVBoxLayout()
+        layout_4.addWidget(self.database_page_obj)
+        self.history_page_obj.widget_2.setLayout(layout_4)
 
         # 跳转到历史
         self.main_page_obj.toolButton_history.clicked.connect(self.transfer_page)
@@ -416,6 +435,13 @@ class MainWindow(QMainWindow):
 
         # 对比俩个视频json
         self.videocompare_page_obj.pushButton_compare.clicked.connect(self.compare_Twovideo)
+
+        # 动作页视频暂停
+        self.stream_thread.stoprecord_signal.connect(lambda :self.statusBar().showMessage("视频停止"))
+
+        # 成功了就启动对比
+        self.startcompare_signal.connect(self.compare_TwovideoResult)
+
 
         # 第二个视频+播放按钮
         # self.lyVideoPlayer_obj2.pushButton_3
@@ -442,6 +468,8 @@ class MainWindow(QMainWindow):
             self.frameAI_thread.stop()
         elif tmpbtn.text()=="历史记录":
             self.stacked_pages.setCurrentIndex(4)
+
+
 
 
     def setbtn_color(self):
@@ -474,6 +502,9 @@ class MainWindow(QMainWindow):
             self.videorecord_page_obj.stoprecord_pushButton.setStyleSheet("background-color: rgb(0, 0, 127);font: 18pt 'Agency FB';")
             self.videorecord_page_obj.time_label.setText("录制时间")
             self.statusBar().showMessage("主页")
+            # 保持窗体最大
+            # self.showMaximized()
+            # self.setGeometry(0, 0, self.screen_rect.width(), self.screen_rect.height())
 
     def compare_page_uuid(self,tmpuuid):
         self.videocompare_page_obj.lineEdit_6.setText(tmpuuid)
@@ -488,7 +519,7 @@ class MainWindow(QMainWindow):
             if os.path.exists(jsonpath1) and os.path.exists(jsonpath2):
                 uuid1 = self.videocompare_page_obj.lineEdit_2.text()
                 uuid2 = self.videocompare_page_obj.lineEdit_6.text()
-                action = self.videorecord_page_obj.lineEdit.text()
+                action = self.videorecord_page_obj.lineEdit.text()+","+self.videorecord_page_obj.lineEdit_5.text()
                 timestamp = datetime.now().strftime("%Y-%m-%d  %H:%M:%S")
                 query = QSqlQuery()
                 # 插入数据
@@ -502,13 +533,25 @@ class MainWindow(QMainWindow):
                 编写dtw 对比俩个视频中关键点的差异给出结论
                 """
 
-
                 if not query.exec():
                     print("插入失败:", query.lastError().text())
                 else:
                     print("插入成功一条对比数据")
                     self.statusBar().showMessage("数据插入成功",5000)
+                    ##数据插入成功就会出现这个
+                    self.stacked_pages.setCurrentIndex(4)
+                    self.startcompare_signal.emit()
 
+    def  compare_TwovideoResult(self,videolist):
+        uuid1  = videolist[0]
+        uuid2 = videolist[1]
+
+        jsonpath1= os.path.join(self.configresult['ly']['video_path'],uuid1 + ".json")
+        jsonpath2= os.path.join(self.configresult['ly']['video_path'],uuid2 + ".json")
+
+        combine_uuid = uuid1+"-"+uuid2
+
+        pass
 
     def set_main_ui_time(self):
         self.timer = QTimer(self)
@@ -531,7 +574,6 @@ class MainWindow(QMainWindow):
                 for key in config.options(section)
             }
         print(f"[{datetime.now().strftime('%Y-%m-%d  %H:%M:%S')}] 配置文件已加载")
-
 
         self.config_page_obj.lineEdit.setText(self.configresult['ly']['rtsp_path'])
         self.config_page_obj.lineEdit_2.setText(self.configresult['ly']['db_path'])
@@ -628,7 +670,6 @@ class MainWindow(QMainWindow):
             if isinstance(model, QSqlTableModel):
                 model.submitAll()  # 数据库提交
             self.show_message(" 删除成功", QMessageBox.Information)
-
             self.calculate_total_pages()
 
     def show_selected_row(self,index):
@@ -733,7 +774,7 @@ class MainWindow(QMainWindow):
             self.statusBar().showMessage("视频已停止")
 
     def start_video_record(self):
-        if not self.frameAI_thread.isRunning():
+        if not self.frameAI_thread.isRunning() and self.stream_thread.isRunning():
             if self.videorecord_page_obj.startrecord_pushButton.isEnabled():
                 self.videorecord_page_obj.startrecord_pushButton.setEnabled(False)
                 self.stream_thread.setstartrecord()

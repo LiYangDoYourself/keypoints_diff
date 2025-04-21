@@ -8,6 +8,8 @@ from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 import cv2
 # 示例骨架连接定义（你可以换成你自己项目的）
 
+videowh = (1280,1080)  #(1280,928)
+
 SKELETON = [
     [5, 6], [5, 7], [7, 9], [6, 8], [8, 10],
     [5, 11], [6, 12], [11, 12],
@@ -73,8 +75,8 @@ def plot_enlarged_pose_pair(kps1, kps2,i,j, scale=2.5, save=False,return_image=F
 
     for ax, kps, color, title in zip([ax1, ax2], [kps1_show, kps2_show], ['red', 'blue'], [f'Video1_{i}', f'Video2_{j}']):
         draw_pose(ax, kps, SKELETON, ANGLE_JOINTS, color=color)
-        ax.set_xlim(0, 1280)
-        ax.set_ylim(928, 0)
+        ax.set_xlim(0, videowh[0])   #1280
+        ax.set_ylim(videowh[1], 0)   #928
         ax.set_aspect('equal')
         ax.set_title(title)
         ax.axis('off')
@@ -99,7 +101,9 @@ def plot_enlarged_pose_pair(kps1, kps2,i,j, scale=2.5, save=False,return_image=F
 def save_pose_video(alignment_path, kps1_list,kps2_list,output_path='testvideos/pose_video.mp4', fps=25):
     # 先画第一帧确定图像大小
 
-    h, w, _ = 1920,1080,1
+    # h, w, _ = 1920,1080,1
+
+    h,w = videowh[1],videowh[0]
     for i, j in alignment_path:
         frame = plot_enlarged_pose_pair(kps1_list[i], kps2_list[j], 0, 0, return_image=True)
         h, w, _ = frame.shape
@@ -115,6 +119,8 @@ def save_pose_video(alignment_path, kps1_list,kps2_list,output_path='testvideos/
 
     writer.release()
     print(f"✅ 视频已保存至：{output_path}")
+
+    return output_path
 
 def plot_pose_pair_blank(kps1, kps2,i,j,angle_joints=ANGLE_JOINTS, skeleton=SKELETON, save=False, return_image=False,out_path='pose_pair.png'):
     # 创建一个图像

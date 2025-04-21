@@ -18,7 +18,7 @@
   </property>
   <layout class="QVBoxLayout" name="verticalLayout_2">
    <item>
-    <layout class="QVBoxLayout" name="verticalLayout" stretch="1,2,3,0">
+    <layout class="QVBoxLayout" name="verticalLayout" stretch="1,2,3,1">
      <item>
       <layout class="QHBoxLayout" name="horizontalLayout">
        <item>
