@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 # author: liyang
 # time: 2025/4/21 16:07
+import os
 import sqlite3
 import sys
 import sqlite3
 from datetime import datetime
 
-from PyQt5.QtCore import QDateTime, Qt
+from PyQt5.QtCore import QDateTime, Qt, pyqtSignal
 from PyQt5.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QTableView,
     QSpinBox, QMessageBox
@@ -18,6 +19,7 @@ from PyQt5.uic import loadUi
 # 每页显示条数
 
 class DBWidget(QWidget):
+    double_signal = pyqtSignal(list)
     def __init__(self):
         super().__init__()
         self.current_page = 0
@@ -27,6 +29,9 @@ class DBWidget(QWidget):
         self.db_path = "keypointdb"
 
         self.current_tablename="comparehistory"
+
+
+        self.video_path="./testvideos"
 
         self.database_page_obj= self
         loadUi('db_page.ui', self.database_page_obj)
@@ -40,6 +45,9 @@ class DBWidget(QWidget):
 
         self.db_path = dbpath
         self.current_tablename = tablename
+
+    def setvideopath(self,video_path):
+        self.video_path = video_path
 
     def init_db(self):
         self.conn = sqlite3.connect(self.db_path)
@@ -90,6 +98,8 @@ class DBWidget(QWidget):
         # self.btn_go.clicked.connect(self.go_to_page)
         self.btn_refresh.clicked.connect(self.load_data)
         self.btn_delete.clicked.connect(self.delete_selected_rows)
+
+        self.table.doubleClicked.connect(self.show_selected_row)
 
     def load_data(self):
         query = sqlite3.connect(f"{self.db_path}").cursor()
@@ -171,7 +181,21 @@ class DBWidget(QWidget):
             self.show_message(" 删除成功", QMessageBox.Information)
             self.load_data()
 
+    def show_selected_row(self,index):
 
+        try:
+            model = self.table.model()
+            row = index.row()
+
+            uuid1 = str(model.data(model.index(row,0)))
+            uuid2 = str(model.data(model.index(row,1)))
+            videoname= uuid1+"-"+uuid2+".mp4"
+            boradvideo = os.path.join(self.video_path,videoname)
+            if(os.path.exists(boradvideo)):
+                self.double_signal.emit([boradvideo,uuid1,uuid2])
+
+        except Exception as e:
+            print(e)
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

@@ -15,9 +15,11 @@ from sklearn.metrics.pairwise import cosine_similarity
 from calculate_angle import *
 
 
-from PyQt5.QtCore import QThread
+from PyQt5.QtCore import QThread, pyqtSignal
+
 
 class DTW(QThread):
+    finsh_signal = pyqtSignal()
     def __init__(self):
         super().__init__()
 
@@ -30,6 +32,11 @@ class DTW(QThread):
 
         self.video_A_rect = []
         self.video_B_rect = []
+
+        self._combine_id=[]
+
+    def getcombineid(self):
+        return self._combine_id
 
     def setparam(self,json1,json2,combine_uuid):
         self.json1 = json1
@@ -44,6 +51,8 @@ class DTW(QThread):
 
         self.video_A_rect = []
         self.video_B_rect = []
+
+        self._combine_id = []
 
         with open(self.json1 , "r",
                   encoding="utf-8") as f:
@@ -155,18 +164,26 @@ class DTW(QThread):
             #     # 查看俩个视频
             #     plot_enlarged_pose_pair(np.array(self.video_A_raw)[i], np.array(self.video_B_raw)[j], i, j)
 
+            self._combine_id = alignment_path
+
             # 保存对比的俩个pose帧
-            return save_pose_video(alignment_path, np.array(self.video_A_raw),np.array(self.video_B_raw),self.combine_uuid)
+            save_pose_video(alignment_path, np.array(self.video_A_raw),np.array(self.video_B_raw),self.combine_uuid)
 
     def run(self) -> None:
         #启动线程
+
         self.dwt_keypoints()
+
+        if(os.path.exists(self.combine_uuid)):
+            self.finsh_signal.emit()
+
 
 
 if __name__ == '__main__':
     dtwobj = DTW()
+    # 拼接上全路径再给出来
     dtwobj.setparam("testvideos/020b97fb614fc01fd32dc5190610ce62_20230826111023 00_00_00-00_00_02.json",
                     "testvideos/089b923eb44a14c247a0fddea426fed8_20230826094716 00_00_00-00_00_02.json",
-                    "testvideos/xxx.mp4")
+                    "testvideos/020b97fb614fc01fd32dc5190610ce62_20230826111023 00_00_00-00_00_02-089b923eb44a14c247a0fddea426fed8_20230826094716 00_00_00-00_00_02.mp4")
     dtwobj.readjson()
     dtwobj.dwt_keypoints()

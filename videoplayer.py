@@ -11,7 +11,6 @@ class VideoPlayer(QWidget):
         super().__init__(parent)
         self.frame=[]
         self.frameid=0
-        pass
 
     def calculate_scaled_rect(self, source_size: QSize, target_size: QSize) -> QRect:
         """计算保持长宽比的绘制区域"""

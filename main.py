@@ -17,6 +17,9 @@ from PyQt5.QtWidgets import QTableView, QMessageBox
 from lyVideoPlayer import *
 
 from lyDataBase import DBWidget
+
+from lyDwt import DTW
+
 # from ultralytics import YOLO
 # model_detect = YOLO("best.pt")   # yolov8-x6-pose.pt
 #
@@ -297,6 +300,9 @@ class MainWindow(QMainWindow):
         # 数据库页面
         self.database_page_obj = DBWidget()
 
+        # dwt对象
+        self.dtw_obj = DTW()
+
         loadUi('main_page.ui', self.main_page_obj)
         loadUi('config_page.ui', self.config_page_obj)
         loadUi('main_return.ui',self.main_return_obj)
@@ -418,9 +424,12 @@ class MainWindow(QMainWindow):
         layout_3.addWidget(self.lyVideoPlayer_obj3)
         self.history_page_obj.widget.setLayout(layout_3)
 
+
         layout_4 = QVBoxLayout()
         layout_4.addWidget(self.database_page_obj)
         self.history_page_obj.widget_2.setLayout(layout_4)
+        self.database_page_obj.setvideopath(self.configresult['ly']['video_path'])
+        self.database_page_obj.double_signal.connect(self.showvideo_selected_row)
 
         # 跳转到历史
         self.main_page_obj.toolButton_history.clicked.connect(self.transfer_page)
@@ -517,41 +526,61 @@ class MainWindow(QMainWindow):
             jsonpath1 = videopath1[:-4]+ ".json"
             jsonpath2 =videopath2[:-4]+ ".json"
             if os.path.exists(jsonpath1) and os.path.exists(jsonpath2):
+
                 uuid1 = self.videocompare_page_obj.lineEdit_2.text()
                 uuid2 = self.videocompare_page_obj.lineEdit_6.text()
-                action = self.videorecord_page_obj.lineEdit.text()+","+self.videorecord_page_obj.lineEdit_5.text()
-                timestamp = datetime.now().strftime("%Y-%m-%d  %H:%M:%S")
-                query = QSqlQuery()
-                # 插入数据
-                query.prepare("INSERT INTO comparehistory (uuidstandard, uuidcontrast, action,time) VALUES (?, ?, ?, ?)")
-                query.addBindValue(uuid1)
-                query.addBindValue(uuid2)
-                query.addBindValue(action)
-                query.addBindValue(timestamp)
+                self.startcompare_signal.emit([uuid1,uuid2])
+                self.statusBar().showMessage("视频和数据正在处理中请稍等")
 
-                """
-                编写dtw 对比俩个视频中关键点的差异给出结论
-                """
-
-                if not query.exec():
-                    print("插入失败:", query.lastError().text())
-                else:
-                    print("插入成功一条对比数据")
-                    self.statusBar().showMessage("数据插入成功",5000)
-                    ##数据插入成功就会出现这个
-                    self.stacked_pages.setCurrentIndex(4)
-                    self.startcompare_signal.emit()
-
-    def  compare_TwovideoResult(self,videolist):
+    def compare_TwovideoResult(self,videolist):
         uuid1  = videolist[0]
         uuid2 = videolist[1]
 
         jsonpath1= os.path.join(self.configresult['ly']['video_path'],uuid1 + ".json")
         jsonpath2= os.path.join(self.configresult['ly']['video_path'],uuid2 + ".json")
 
-        combine_uuid = uuid1+"-"+uuid2
+        combine_uuid =os.path.join(self.configresult['ly']['video_path'],uuid1+"-"+uuid2+".mp4")
 
-        pass
+        if os.path.exists(combine_uuid):
+            self.statusBar().showMessage("已经存在数据了", 5000)
+            self.lyVideoPlayer_obj3.setrtsp(combine_uuid)
+            self.stacked_pages.setCurrentIndex(4)
+            return
+
+        try:
+            self.dtw_obj.setparam(jsonpath1,jsonpath2,combine_uuid)
+            self.dtw_obj.readjson()
+            self.dtw_obj.dwt_keypoints()
+            # self.dtw_obj.finsh_signal.connect()
+            self.statusBar().showMessage("数据处理完成",5000)
+
+            action = self.videorecord_page_obj.lineEdit.text() + "," + self.videorecord_page_obj.lineEdit_5.text()
+            timestamp = datetime.now().strftime("%Y-%m-%d  %H:%M:%S")
+            query = QSqlQuery()
+            # 插入数据
+            query.prepare("INSERT INTO comparehistory (uuidstandard, uuidcontrast, action,time) VALUES (?, ?, ?, ?)")
+            query.addBindValue(uuid1)
+            query.addBindValue(uuid2)
+            query.addBindValue(action)
+            query.addBindValue(timestamp)
+
+            """
+            编写dtw 对比俩个视频中关键点的差异给出结论
+            """
+
+            if not query.exec():
+                print("插入失败:", query.lastError().text())
+            else:
+                print("插入成功一条对比数据")
+                self.statusBar().showMessage("数据插入成功", 5000)
+
+                self.lyVideoPlayer_obj3.setrtsp(combine_uuid)
+                ##数据插入成功就会出现这个
+                self.stacked_pages.setCurrentIndex(4)
+
+        except Exception as e:
+            print(e)
+
 
     def set_main_ui_time(self):
         self.timer = QTimer(self)
@@ -685,7 +714,7 @@ class MainWindow(QMainWindow):
             3: self.videorecord_page_obj.lineEdit_2 #  第3列-> 描述
         }
 
-        # 遍历映射关系填充数据
+        # 遍历映射关系填充数据setdbinfo
         for col, widget in column_mapping.items():
             widget.setText(str(model.data(model.index(row, col))))
 
@@ -850,6 +879,10 @@ class MainWindow(QMainWindow):
         self.stacked_pages.setCurrentIndex(3)
         self.statusBar().showMessage("开始测评")
 
+    def showvideo_selected_row(self,uuidlist):
+        # boradvideo,uuid1,uuid2 合并之后视频地址
+        self.lyVideoPlayer_obj3.setrtsp(uuidlist[0])
+        self.lyVideoPlayer_obj3.start_videoborad()
 
     def closeEvent(self, event):
             self.stream_thread.stop()
