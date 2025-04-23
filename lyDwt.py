@@ -171,12 +171,9 @@ class DTW(QThread):
 
     def run(self) -> None:
         #启动线程
-
         self.dwt_keypoints()
-
         if(os.path.exists(self.combine_uuid)):
             self.finsh_signal.emit()
-
 
 
 if __name__ == '__main__':

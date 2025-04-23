@@ -21,6 +21,7 @@ class lyVideoStreamThread(QThread):
 
     recordtime_singal = pyqtSignal(str)
 
+    sendframeindex_signal = pyqtSignal(str)
 
     def __init__(self):
         super().__init__()
@@ -61,16 +62,20 @@ class lyVideoStreamThread(QThread):
             width = self.cap.get(cv2.CAP_PROP_FRAME_WIDTH)
             height = self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
 
+            self.total_frames = int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT))
+
             # 把视频的宽高发到AI处理线程中
             self.widthheight_signal.emit([width,height])
 
-            i = 1
+
+
+            self.frame_index = 0
 
             while self._running:
                 if not self._paused:  # 非暂停状态才处理帧
                     ret, frame = self.cap.read()
                     if ret:
-                        self.matdict_signal.emit({i:frame})
+                        self.matdict_signal.emit({self.frame_index:frame})
 
                         # 是真的就开启录制 ，并处AI处理
                         if(self._flag_startrecord):
@@ -78,20 +83,56 @@ class lyVideoStreamThread(QThread):
                                 self.start_time = time.time()
                                 self._timeflag+=1
 
-                            self.startrecord_signal.emit({i:frame})
+                            self.startrecord_signal.emit({self.frame_index:frame})
                             self.end_time = time.time()
                             self.recordtime_singal.emit(self.format_time(self.end_time-self.start_time))
 
                         if flag_mp4:
                             time.sleep(1/fps)
 
-                        i += 1
+                        self.frame_index += 1
                     else:
                         break
                 else:
                      time.sleep(1) # 暂停时降低CPU占用
         except Exception as e:
             print(e)
+
+        # ✅ 上一帧控制
+    def prev_frame(self):
+        if not self._paused or not self.cap or not self.cap.isOpened():
+            print("未处于暂停状态或视频无效")
+            return
+
+        self.frame_index = max(0, self.frame_index - 1)
+        self.cap.set(cv2.CAP_PROP_POS_FRAMES, self.frame_index)
+        ret, frame = self.cap.read()
+        if ret:
+            self.sendframeindex_signal.emit(str(self.frame_index))
+            self.matdict_signal.emit({self.frame_index: frame})
+            print(f"跳转到上一帧：{self.frame_index}")
+        else:
+            print("无法读取上一帧")
+
+        # ✅ 下一帧控制
+    def next_frame(self):
+        if not self._paused or not self.cap or not self.cap.isOpened():
+            print("未处于暂停状态或视频无效")
+            return
+
+        if self.frame_index + 1 >= self.total_frames:
+            print("已经是最后一帧")
+            return
+
+        self.frame_index += 1
+        self.cap.set(cv2.CAP_PROP_POS_FRAMES, self.frame_index)
+        ret, frame = self.cap.read()
+        if ret:
+            self.sendframeindex_signal.emit(str(self.frame_index))
+            self.matdict_signal.emit({self.frame_index: frame})
+            print(f"跳转到下一帧：{self.frame_index}")
+        else:
+            print("无法读取下一帧")
 
     def pause(self):
         """暂停视频流（保持线程运行但不发送帧）"""
@@ -130,13 +171,14 @@ class lyVideoPlayer(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
 
-        self.path = "rtsp://admin:798446835qqcom@192.168.1.64:554/h264/ch1/main/av_stream"
+        self.path = "./testvideos/pose_video.mp4"
 
         self.videostream_thread = lyVideoStreamThread()
         self.videoframeai_thread = AIFrameThread()
-        self.flag_startai = False
+        self.flag_startai = False  # 控制AI录制和停止录制
         self.frame = []
         self.frameid = 0
+        self.flag_nextpre=False   # 控制上一帧下一帧
 
         loadUi('videoborad_page.ui',self)
 
@@ -168,11 +210,18 @@ class lyVideoPlayer(QWidget):
         # 设置视频的宽高
         self.videostream_thread.widthheight_signal.connect(self.videoframeai_thread.setwidthheight)
 
-        #发送视频帧
+        # 发送视频帧
         self.videostream_thread.startrecord_signal.connect(self.videoframeai_thread.putframequeue)
 
         # 发出录制视频的uuid
         self.videoframeai_thread.uuid_signal.connect(self.returnuuid)
+
+        # 上一帧 下一帧
+        self.pushButton_5.clicked.connect(self.prev_frame)
+        self.pushButton_6.clicked.connect(self.next_frame)
+
+        # 设置相关的参数和需求说明
+
 
         # 按钮列表，方便统一管理
         self.buttons = [
@@ -212,6 +261,9 @@ class lyVideoPlayer(QWidget):
     def setrtsp(self,path):
         self.path = path
 
+    def setnextpreflag(self):
+        self.flag_nextpre = True
+
     def start_videoborad(self):
 
         if not self.videostream_thread.isRunning():
@@ -246,11 +298,13 @@ class lyVideoPlayer(QWidget):
             self.videostream_thread.setstoprecord()
             self.videoframeai_thread.stop()
 
-    def next_frame(self,index):
-        pass
+    def next_frame(self):
 
-    def prev_frame(self,index):
-        pass
+        if(self.videostream_thread.isRunning() and self.flag_nextpre):
+            self.videostream_thread.next_frame()
+    def prev_frame(self):
+        if (self.videostream_thread.isRunning() and self.flag_nextpre):
+            self.videostream_thread.prev_frame()
 
     def returnuuid(self,tmpuuid):
         self.uuid_signal.emit(tmpuuid)

@@ -423,6 +423,7 @@ class MainWindow(QMainWindow):
         layout_3 = QVBoxLayout()
         layout_3.addWidget(self.lyVideoPlayer_obj3)
         self.history_page_obj.widget.setLayout(layout_3)
+        self.lyVideoPlayer_obj3.setnextpreflag()
 
 
         layout_4 = QVBoxLayout()
@@ -477,8 +478,6 @@ class MainWindow(QMainWindow):
             self.frameAI_thread.stop()
         elif tmpbtn.text()=="历史记录":
             self.stacked_pages.setCurrentIndex(4)
-
-
 
 
     def setbtn_color(self):
