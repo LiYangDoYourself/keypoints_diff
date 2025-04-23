@@ -190,9 +190,11 @@ class DBWidget(QWidget):
             uuid1 = str(model.data(model.index(row,0)))
             uuid2 = str(model.data(model.index(row,1)))
             videoname= uuid1+"-"+uuid2+".mp4"
+            jsonname = uuid1+"-"+uuid2+".json"
             boradvideo = os.path.join(self.video_path,videoname)
+            jsonpath = os.path.join(self.video_path,jsonname)
             if(os.path.exists(boradvideo)):
-                self.double_signal.emit([boradvideo,uuid1,uuid2])
+                self.double_signal.emit([boradvideo,jsonpath,uuid1,uuid2])
 
         except Exception as e:
             print(e)

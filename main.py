@@ -538,16 +538,16 @@ class MainWindow(QMainWindow):
         jsonpath1= os.path.join(self.configresult['ly']['video_path'],uuid1 + ".json")
         jsonpath2= os.path.join(self.configresult['ly']['video_path'],uuid2 + ".json")
 
-        combine_uuid =os.path.join(self.configresult['ly']['video_path'],uuid1+"-"+uuid2+".mp4")
-
-        if os.path.exists(combine_uuid):
+        combine_mp4uuid = os.path.join(self.configresult['ly']['video_path'],uuid1+"-"+uuid2+".mp4")
+        combine_jsonuuid = os.path.join(self.configresult['ly']['video_path'],uuid1+"-"+uuid2+".json")
+        if os.path.exists(combine_mp4uuid) and os.path.exists(combine_jsonuuid):
             self.statusBar().showMessage("已经存在数据了", 5000)
-            self.lyVideoPlayer_obj3.setrtsp(combine_uuid)
+            self.lyVideoPlayer_obj3.setrtsp(combine_mp4uuid)
             self.stacked_pages.setCurrentIndex(4)
             return
 
         try:
-            self.dtw_obj.setparam(jsonpath1,jsonpath2,combine_uuid)
+            self.dtw_obj.setparam(jsonpath1,jsonpath2,combine_mp4uuid,combine_jsonuuid)
             self.dtw_obj.readjson()
             self.dtw_obj.dwt_keypoints()
             # self.dtw_obj.finsh_signal.connect()
@@ -573,7 +573,7 @@ class MainWindow(QMainWindow):
                 print("插入成功一条对比数据")
                 self.statusBar().showMessage("数据插入成功", 5000)
 
-                self.lyVideoPlayer_obj3.setrtsp(combine_uuid)
+                self.lyVideoPlayer_obj3.setrtsp(combine_mp4uuid)
                 ##数据插入成功就会出现这个
                 self.stacked_pages.setCurrentIndex(4)
 
@@ -871,16 +871,22 @@ class MainWindow(QMainWindow):
         self.videocompare_page_obj.lineEdit_2.setText(self.videorecord_page_obj.lineEdit_5.text())
         self.videocompare_page_obj.lineEdit_3.setText(self.videorecord_page_obj.lineEdit_2.text())
         self.videocompare_page_obj.lineEdit_4.setText(self.videorecord_page_obj.lineEdit_4.text())
-        self.lyVideoPlayer_obj1.setrtsp(self.videocompare_page_obj.lineEdit_4.text())
 
+        self.lyVideoPlayer_obj1.setrtsp(self.videocompare_page_obj.lineEdit_4.text())
         self.lyVideoPlayer_obj2.setrtsp(self.configresult['ly']['rtsp_path'])
+
+        self.lyVideoPlayer_obj1.setflagloop()
+        self.lyVideoPlayer_obj1.start_videoborad()
 
         self.stacked_pages.setCurrentIndex(3)
         self.statusBar().showMessage("开始测评")
 
     def showvideo_selected_row(self,uuidlist):
-        # boradvideo,uuid1,uuid2 合并之后视频地址
+        # boradvideo,jsonpath,uuid1,uuid2 合并之后视频地址,和组合的frameid
         self.lyVideoPlayer_obj3.setrtsp(uuidlist[0])
+        self.lyVideoPlayer_obj3.setcombinejson(uuidlist[1],uuidlist[2],uuidlist[3])
+        self.lyVideoPlayer_obj3.setstorepath(self.configresult['ly']['video_path'])
+        self.lyVideoPlayer_obj3.readjsondata()
         self.lyVideoPlayer_obj3.start_videoborad()
 
     def closeEvent(self, event):

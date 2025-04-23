@@ -8,7 +8,7 @@ from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 import cv2
 # 示例骨架连接定义（你可以换成你自己项目的）
 
-videowh = (1280,1080)  #(1280,928)
+videowh = (1920,1280)  #(1280,928)
 
 SKELETON = [
     [5, 6], [5, 7], [7, 9], [6, 8], [8, 10],

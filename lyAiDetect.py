@@ -71,7 +71,29 @@ class AIFrameThread(QThread):
         # self.quit()
         # self.wait()
 
+    def optimize_keypoints(self,frameid_keypoint, start_kpt=5, end_kpt=16):
+        total_frames = len(frameid_keypoint)
 
+        for k in range(total_frames):
+            current_frame = frameid_keypoint[k]
+
+            for i in range(start_kpt, end_kpt + 1):
+                if i >= len(current_frame) - 1:
+                    continue  # 避免越界，最后一个是 box
+
+                x, y = current_frame[i]
+
+                if (x, y) == (0, 0):
+                    # 尝试从前一帧取
+                    if k > 0 and frameid_keypoint[k - 1][i] != (0, 0):
+                        current_frame[i] = frameid_keypoint[k - 1][i]
+                    # 再尝试从后一帧取
+                    elif k < total_frames - 1 and frameid_keypoint[k + 1][i] != (0, 0):
+                        current_frame[i] = frameid_keypoint[k + 1][i]
+
+            frameid_keypoint[k] = current_frame
+
+        return frameid_keypoint
 
     def run(self) -> None:
         try:
@@ -133,6 +155,9 @@ class AIFrameThread(QThread):
             # 获取视频帧率
             out.release()
             self.queue_frame.queue.clear()
+
+            if(frameid_keypoint):
+                frameid_keypoint = self.optimize_keypoints(frameid_keypoint)
 
             jsonpath = self._save+onlyuuid+".json"
             with open(jsonpath, "w", encoding="utf-8") as f:

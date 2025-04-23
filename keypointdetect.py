@@ -46,6 +46,30 @@ def framedetect(frame,model):
     return results
 
 
+def optimize_keypoints(frameid_keypoint, start_kpt=5, end_kpt=16):
+    total_frames = len(frameid_keypoint)
+
+    for k in range(total_frames):
+        current_frame = frameid_keypoint[k]
+
+        for i in range(start_kpt, end_kpt + 1):
+            if i >= len(current_frame) - 1:
+                continue  # 避免越界，最后一个是 box
+
+            x, y = current_frame[i]
+
+            if (x, y) == (0, 0):
+                # 尝试从前一帧取
+                if k > 0 and frameid_keypoint[k - 1][i] != (0, 0):
+                    current_frame[i] = frameid_keypoint[k - 1][i]
+                # 再尝试从后一帧取
+                elif k < total_frames - 1 and frameid_keypoint[k + 1][i] != (0, 0):
+                    current_frame[i] = frameid_keypoint[k + 1][i]
+
+        frameid_keypoint[k] = current_frame
+
+    return frameid_keypoint
+
 
 if __name__ == '__main__':
 
@@ -58,7 +82,7 @@ if __name__ == '__main__':
     print("modelnames:",modelnames)
 
     # cap = cv2.VideoCapture(r"rtsp://admin:798446835qqcom@192.168.1.64:554/h264/ch1/main/av_stream")
-    cap = cv2.VideoCapture(r"H:\workspace\keypoints_diff\testvideos\089b923eb44a14c247a0fddea426fed8_20230826094716 00_00_00-00_00_02.mp4")
+    cap = cv2.VideoCapture(r"H:\workspace\keypoints_diff\testvideos\result20250411094252-test.mp4")
 
     if not cap.isOpened():
         print("无法打开摄像头")
@@ -142,9 +166,11 @@ if __name__ == '__main__':
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
 
+    if(frameid_keypoint):
+        frameid_keypoint = optimize_keypoints(frameid_keypoint)
 
 
-    with open("testvideos/089b923eb44a14c247a0fddea426fed8_20230826094716 00_00_00-00_00_02.json", "w", encoding="utf-8") as f:
+    with open(r"H:\workspace\keypoints_diff\testvideos\result20250411094252-test.json", "w", encoding="utf-8") as f:
             json.dump(frameid_keypoint, f, ensure_ascii=False)   #indent=4,
 
     print(frameid_keypoint)
@@ -153,23 +179,5 @@ if __name__ == '__main__':
     cv2.destroyAllWindows()
 
 
-"""
-1  2  3   4         n  序号        10
-1  4  7   10    ... x  第几个小朋友  28
-2  6  10  14        38 卡片数量     38
 
-
-an=a1+(n-1)d
-38=2+(n-1)4
-n=10
-(x+n)=38
-
-28个小朋友
-28/3 = 9 。。。。1
-
-9*（10）=90
-
-sn = n(a1+an)/2 =10(2+38)/2=200
-
-"""
 

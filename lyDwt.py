@@ -38,10 +38,11 @@ class DTW(QThread):
     def getcombineid(self):
         return self._combine_id
 
-    def setparam(self,json1,json2,combine_uuid):
+    def setparam(self,json1,json2,combine_mp4uuid,combine_jsonuuid):
         self.json1 = json1
         self.json2 = json2
-        self.combine_uuid = combine_uuid
+        self.combine_uuid = combine_mp4uuid
+        self.combine_uuid2 = combine_jsonuuid
 
 
     def readjson(self):
@@ -166,9 +167,13 @@ class DTW(QThread):
 
             self._combine_id = alignment_path
 
-            # 保存对比的俩个pose帧
-            save_pose_video(alignment_path, np.array(self.video_A_raw),np.array(self.video_B_raw),self.combine_uuid)
+            # 保存对比的json
+            with open(self.combine_uuid2,'w') as f:
+                json.dump(self._combine_id, f)
 
+            # 保存对比的俩个pose帧数据
+            # save_pose_video(alignment_path, np.array(self.video_A_raw),np.array(self.video_B_raw),self.combine_uuid)
+            save_pose_video(alignment_path, np.array(self.video_A_raw), np.array(self.video_B_raw), self.combine_uuid)
     def run(self) -> None:
         #启动线程
         self.dwt_keypoints()
@@ -179,8 +184,15 @@ class DTW(QThread):
 if __name__ == '__main__':
     dtwobj = DTW()
     # 拼接上全路径再给出来
-    dtwobj.setparam("testvideos/020b97fb614fc01fd32dc5190610ce62_20230826111023 00_00_00-00_00_02.json",
-                    "testvideos/089b923eb44a14c247a0fddea426fed8_20230826094716 00_00_00-00_00_02.json",
-                    "testvideos/020b97fb614fc01fd32dc5190610ce62_20230826111023 00_00_00-00_00_02-089b923eb44a14c247a0fddea426fed8_20230826094716 00_00_00-00_00_02.mp4")
+       # dtwobj.setparam("testvideos/020b97fb614fc01fd32dc5190610ce62_20230826111023 00_00_00-00_00_02.json",
+    #                 "testvideos/089b923eb44a14c247a0fddea426fed8_20230826094716 00_00_00-00_00_02.json",
+    #                 "testvideos/020b97fb614fc01fd32dc5190610ce62_20230826111023 00_00_00-00_00_02-089b923eb44a14c247a0fddea426fed8_20230826094716 00_00_00-00_00_02.mp4",
+    #                 "testvideos/020b97fb614fc01fd32dc5190610ce62_20230826111023 00_00_00-00_00_02-089b923eb44a14c247a0fddea426fed8_20230826094716 00_00_00-00_00_02.json")
+
+    dtwobj.setparam("testvideos/result20250411094125-standard.json",
+                    "testvideos/result20250411094252-test.json",
+                    "testvideos/result20250411094125-standard-result20250411094252-test.mp4",
+                    "testvideos/result20250411094125-standard-result20250411094252-test.json")
+
     dtwobj.readjson()
     dtwobj.dwt_keypoints()

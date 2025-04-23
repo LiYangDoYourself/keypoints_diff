@@ -21,7 +21,7 @@ class lyVideoStreamThread(QThread):
 
     recordtime_singal = pyqtSignal(str)
 
-    sendframeindex_signal = pyqtSignal(str)
+    sendframeindex_signal = pyqtSignal(int)
 
     def __init__(self):
         super().__init__()
@@ -31,6 +31,7 @@ class lyVideoStreamThread(QThread):
         self._timeflag=0
         self._flag_startrecord=False
         self._flag_stoprecord=False
+        self._flag_loop=False
 
     def setrtsp(self,path):
         self.path = path
@@ -48,7 +49,7 @@ class lyVideoStreamThread(QThread):
                 return
 
             flag_mp4=False
-            if self.path.endswith(".mp4"):
+            if self.path.endswith(".mp4") or self.path.endswith(".avi"):
                 flag_mp4 = True
 
             self._timeflag=0   # 用来显示录制了多少秒
@@ -74,6 +75,12 @@ class lyVideoStreamThread(QThread):
             while self._running:
                 if not self._paused:  # 非暂停状态才处理帧
                     ret, frame = self.cap.read()
+
+                    if  self._flag_loop and  not ret:
+                        self.cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+                        self.frame_index = 0
+                        continue
+
                     if ret:
                         self.matdict_signal.emit({self.frame_index:frame})
 
@@ -108,7 +115,7 @@ class lyVideoStreamThread(QThread):
         self.cap.set(cv2.CAP_PROP_POS_FRAMES, self.frame_index)
         ret, frame = self.cap.read()
         if ret:
-            self.sendframeindex_signal.emit(str(self.frame_index))
+            self.sendframeindex_signal.emit(self.frame_index)
             self.matdict_signal.emit({self.frame_index: frame})
             print(f"跳转到上一帧：{self.frame_index}")
         else:
@@ -128,7 +135,7 @@ class lyVideoStreamThread(QThread):
         self.cap.set(cv2.CAP_PROP_POS_FRAMES, self.frame_index)
         ret, frame = self.cap.read()
         if ret:
-            self.sendframeindex_signal.emit(str(self.frame_index))
+            self.sendframeindex_signal.emit(self.frame_index)
             self.matdict_signal.emit({self.frame_index: frame})
             print(f"跳转到下一帧：{self.frame_index}")
         else:
@@ -164,6 +171,10 @@ class lyVideoStreamThread(QThread):
         self.end_time = 0
         print("停止录制")
 
+    def setflagloop(self):
+        self._flag_loop=True
+
+
 #这是一个视频播放控件
 class lyVideoPlayer(QWidget):
     my_signal = pyqtSignal(dict)
@@ -172,14 +183,20 @@ class lyVideoPlayer(QWidget):
         super().__init__(parent)
 
         self.path = "./testvideos/pose_video.mp4"
-
+        self.jsonpath = None
+        self.storepath = "./testvideos"
         self.videostream_thread = lyVideoStreamThread()
         self.videoframeai_thread = AIFrameThread()
         self.flag_startai = False  # 控制AI录制和停止录制
+
+        self.flag_loop = False  # 是否循环播放
         self.frame = []
         self.frameid = 0
         self.flag_nextpre=False   # 控制上一帧下一帧
 
+        self.listdata = []
+        self.id1json_data = []
+        self.id2json_data = []
         loadUi('videoborad_page.ui',self)
 
         self.init_slot()
@@ -222,6 +239,7 @@ class lyVideoPlayer(QWidget):
 
         # 设置相关的参数和需求说明
 
+        self.videostream_thread.sendframeindex_signal.connect(self.get_frameid_deal)
 
         # 按钮列表，方便统一管理
         self.buttons = [
@@ -257,12 +275,6 @@ class lyVideoPlayer(QWidget):
                 btn.setStyleSheet(active_style)
             else:
                 btn.setStyleSheet(inactive_style)
-
-    def setrtsp(self,path):
-        self.path = path
-
-    def setnextpreflag(self):
-        self.flag_nextpre = True
 
     def start_videoborad(self):
 
@@ -311,6 +323,62 @@ class lyVideoPlayer(QWidget):
 
     def setsavepath(self,path):
         self.videoframeai_thread.setsavepath(path)
+
+    def setrtsp(self, path):
+        self.path = path
+    def setcombinejson(self, jsonpath, uuid1, uuid2):
+        self.jsonpath = jsonpath  # xxx/xxx/xx.json
+        self.uuid1 = uuid1  # xxx1
+        self.uuid2 = uuid2  # xxx2
+
+    def setnextpreflag(self):
+        self.flag_nextpre = True
+
+    def setflagloop(self):
+        self.videostream_thread.setflagloop()
+    def setstorepath(self, storepath):
+        self.storepath = storepath
+    def readjsondata(self):
+
+        try:
+
+            if(os.path.exists(self.jsonpath)):
+                with open(self.jsonpath, "r", encoding="utf-8") as f:
+                    self.listdata = json.load(f)
+
+            # id1 json路径
+            id1json_path = os.path.join(self.storepath, self.uuid1 + ".json")
+            id2json_path = os.path.join(self.storepath, self.uuid2 + ".json")
+            # 提取关键点数据
+            if(os.path.exists(id1json_path) and os.path.exists(id2json_path)):
+                with open(id1json_path, 'r') as f:
+                    self.id1json_data = json.load(f)
+
+                with open(id2json_path, 'r') as f:
+                    self.id2json_data = json.load(f)
+
+        except Exception as e:
+            print(e)
+
+    def get_frameid_deal(self,frameid):
+        try:
+            # if os.path.exists(self.jsonpath):
+            if (frameid<len(self.listdata)):
+
+                # 提取出来匹配的id1和id2
+                frame_id1id2 = self.listdata[frameid]
+
+                # 提取关键点数据   注意这里面的标签是 key "0":data  darashape:[17,2]
+                keypointid1 = self.id1json_data[str(frame_id1id2[0])]
+                keypointid2 = self.id2json_data[str(frame_id1id2[1])]
+
+                print("keypointid1:",keypointid1)
+                print("keypointid2:",keypointid2)
+
+        except Exception as e:
+            print(e)
+
+
 
 if __name__ == '__main__':
     import sys
