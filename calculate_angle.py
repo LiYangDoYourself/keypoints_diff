@@ -90,13 +90,13 @@ def plot_enlarged_pose_pair(kps1, kps2,i,j, scale=2.5, save=False,return_image=F
         image = image.reshape(canvas.get_width_height()[::-1] + (3,))
         plt.close(fig)
         return image  # 返回RGB图像
-
+    """
     if save:
         plt.savefig('enlarged_pose_pair.png', dpi=200)
         plt.close()
     else:
         plt.show()
-
+    """
 
 def save_pose_video(alignment_path, kps1_list,kps2_list,output_path='testvideos/pose_video.mp4', fps=25):
     # 先画第一帧确定图像大小

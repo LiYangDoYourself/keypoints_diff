@@ -11,6 +11,9 @@ from PyQt5.uic import loadUi
 
 from lyAiDetect import *
 
+import numpy as np
+
+
 #取视频流的地址
 class lyVideoStreamThread(QThread):
     matdict_signal = pyqtSignal(dict)
@@ -331,6 +334,7 @@ class lyVideoPlayer(QWidget):
         self.uuid1 = uuid1  # xxx1
         self.uuid2 = uuid2  # xxx2
 
+    #这个要设置的
     def setnextpreflag(self):
         self.flag_nextpre = True
 
@@ -360,6 +364,31 @@ class lyVideoPlayer(QWidget):
         except Exception as e:
             print(e)
 
+    # ========== 角度差异函数 ==========
+    def calculate_angle(self,a, b, c):
+        ba = a - b
+        bc = c - b
+        cosine = np.dot(ba, bc) / (np.linalg.norm(ba) * np.linalg.norm(bc) + 1e-8)
+        angle = np.arccos(np.clip(cosine, -1.0, 1.0))
+        return np.degrees(angle)
+
+    # 角度计算函数（与竖直方向的夹角）
+    def calculate_torso_angle(self, neck, hip_center):
+        vector = hip_center - neck
+        vertical = np.array([0, 1])  # 向下为竖直方向
+        cos_theta = np.dot(vector, vertical) / (np.linalg.norm(vector) * np.linalg.norm(vertical))
+        angle = np.arccos(np.clip(cos_theta, -1.0, 1.0))  # 防止数值误差
+        return np.degrees(angle)
+
+    # ========== 姿态结构归一化对比 ==========
+    def normalize_keypoints(self,kp):
+        origin = (kp[0]+kp[1])/2  # 肩膀中间
+        kp = kp - origin
+        scale = np.linalg.norm(kp)
+        return kp / (scale + 1e-8)
+
+
+    #回传相关的对比数据
     def get_frameid_deal(self,frameid):
         try:
             # if os.path.exists(self.jsonpath):
@@ -369,11 +398,50 @@ class lyVideoPlayer(QWidget):
                 frame_id1id2 = self.listdata[frameid]
 
                 # 提取关键点数据   注意这里面的标签是 key "0":data  darashape:[17,2]
-                keypointid1 = self.id1json_data[str(frame_id1id2[0])]
-                keypointid2 = self.id2json_data[str(frame_id1id2[1])]
+                # keypointid1 = self.id1json_data[str(frame_id1id2[0])]
+                # keypointid2 = self.id2json_data[str(frame_id1id2[1])]
+                #
+                # print("keypointid1:",keypointid1)
+                # print("keypointid2:",keypointid2)
 
-                print("keypointid1:",keypointid1)
-                print("keypointid2:",keypointid2)
+                # 注意这里要转换成
+                kp1 = np.array(self.id1json_data[str(frame_id1id2[0])][0:17])
+                kp2 = np.array(self.id2json_data[str(frame_id1id2[1])][0:17])
+
+                print("keypointid1:",kp1)
+                print("keypointid2:",kp2)
+
+
+                # 示例角度对比（左臂、右臂、左腿、右腿）
+                angles1 = [
+                    self.calculate_angle(kp1[5], kp1[7], kp1[9]),  # 左肩-肘-腕
+                    self.calculate_angle(kp1[6], kp1[8], kp1[10]),  # 右肩-肘-腕
+                    self.calculate_angle(kp1[11], kp1[13], kp1[15]),  # 左髋-膝-踝
+                    self.calculate_angle(kp1[12], kp1[14], kp1[16]),  # 右髋-膝-踝
+                    self.calculate_torso_angle((kp1[5]+kp1[6]) / 2,(kp1[11] + kp1[12]) / 2)
+                ]
+                angles2 = [
+                    self.calculate_angle(kp2[5], kp2[7], kp2[9]),
+                    self.calculate_angle(kp2[6], kp2[8], kp2[10]),
+                    self.calculate_angle(kp2[11], kp2[13], kp2[15]),
+                    self.calculate_angle(kp2[12], kp2[14], kp2[16]),
+                    self.calculate_torso_angle((kp2[5] + kp2[6]) / 2, (kp2[11] + kp2[12]) / 2)
+                ]
+                angle_diff = np.abs(np.array(angles1) - np.array(angles2))
+
+                # ========== 欧氏距离 ==========[]
+                euclidean_diff = np.linalg.norm(kp1[5:17] - kp2[5:17], axis=1)
+                mean_distance = np.mean(euclidean_diff)
+
+                # ========== 姿态结构归一化对比 ==========
+                norm1 = self.normalize_keypoints(kp1[5:17])
+                norm2 = self.normalize_keypoints(kp2[5:17])
+                structure_diff = np.linalg.norm(norm1 - norm2)
+
+                print("整体结构差异:", structure_diff)
+                print("角度差（左臂、右臂、左腿、右腿、躯干角度差（脖子→髋部）:", angle_diff)
+                print("平均欧氏距离:", mean_distance)
+                print("平均角度差:", np.mean(angle_diff))
 
         except Exception as e:
             print(e)

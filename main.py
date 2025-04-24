@@ -310,10 +310,6 @@ class MainWindow(QMainWindow):
         loadUi('videocompare_page.ui',self.videocompare_page_obj)
         loadUi('history_page.ui',self.history_page_obj)
 
-
-
-
-
         # 添加到容器
         self.stacked_pages.addWidget(self.main_page_obj)   # 0 主页
         self.stacked_pages.addWidget(self.config_page_obj) # 1  配置页
@@ -340,8 +336,6 @@ class MainWindow(QMainWindow):
 
         #读取数据库
         self.readdbfile()
-
-
 
 
     def init_slot(self):
@@ -452,6 +446,9 @@ class MainWindow(QMainWindow):
         # 成功了就启动对比
         self.startcompare_signal.connect(self.compare_TwovideoResult)
 
+        # dtw 对比完之后 就要开始做相关的处理了
+        self.dtw_obj.finished.connect(self.save_data_history)
+
 
         # 第二个视频+播放按钮
         # self.lyVideoPlayer_obj2.pushButton_3
@@ -467,6 +464,10 @@ class MainWindow(QMainWindow):
             self.stacked_pages.setCurrentIndex(0)
             self.stream_thread.stop()
             self.frameAI_thread.stop()
+
+            self.lyVideoPlayer_obj1.stop_videoborad()
+            self.lyVideoPlayer_obj2.stop_videoborad()
+            self.lyVideoPlayer_obj3.stop_videoborad()
 
         elif tmpbtn.text() == "修改配置":
             self.stacked_pages.setCurrentIndex(1)
@@ -509,7 +510,7 @@ class MainWindow(QMainWindow):
             self.videorecord_page_obj.startrecord_pushButton.setStyleSheet("background-color: rgb(0, 0, 127);font: 18pt 'Agency FB';")
             self.videorecord_page_obj.stoprecord_pushButton.setStyleSheet("background-color: rgb(0, 0, 127);font: 18pt 'Agency FB';")
             self.videorecord_page_obj.time_label.setText("录制时间")
-            self.statusBar().showMessage("主页")
+            self.statusBar().showMessage("主页",5000)
             # 保持窗体最大
             # self.showMaximized()
             # self.setGeometry(0, 0, self.screen_rect.width(), self.screen_rect.height())
@@ -532,54 +533,91 @@ class MainWindow(QMainWindow):
                 self.statusBar().showMessage("视频和数据正在处理中请稍等")
 
     def compare_TwovideoResult(self,videolist):
-        uuid1  = videolist[0]
-        uuid2 = videolist[1]
+        self.standard_uuid1  = videolist[0]
+        self.constract_uuid2 = videolist[1]
 
-        jsonpath1= os.path.join(self.configresult['ly']['video_path'],uuid1 + ".json")
-        jsonpath2= os.path.join(self.configresult['ly']['video_path'],uuid2 + ".json")
+        jsonpath1= os.path.join(self.configresult['ly']['video_path'],self.standard_uuid1 + ".json")
+        jsonpath2= os.path.join(self.configresult['ly']['video_path'],self.constract_uuid2 + ".json")
 
-        combine_mp4uuid = os.path.join(self.configresult['ly']['video_path'],uuid1+"-"+uuid2+".mp4")
-        combine_jsonuuid = os.path.join(self.configresult['ly']['video_path'],uuid1+"-"+uuid2+".json")
-        if os.path.exists(combine_mp4uuid) and os.path.exists(combine_jsonuuid):
-            self.statusBar().showMessage("已经存在数据了", 5000)
-            self.lyVideoPlayer_obj3.setrtsp(combine_mp4uuid)
+        self.combine_mp4uuid = os.path.join(self.configresult['ly']['video_path'],self.standard_uuid1+"-"+self.constract_uuid2+".mp4")
+        self.combine_jsonuuid = os.path.join(self.configresult['ly']['video_path'],self.standard_uuid1+"-"+self.constract_uuid2+".json")
+        if os.path.exists(self.combine_mp4uuid) and os.path.exists(self.combine_jsonuuid):
+            self.statusBar().showMessage("关键点数据已经存在了", 5000)
+            # self.lyVideoPlayer_obj3.setrtsp(self.combine_mp4uuid)
+            # self.stacked_pages.setCurrentIndex(4)
+            uuidlist = [self.combine_mp4uuid, self.combine_jsonuuid, self.standard_uuid1, self.constract_uuid2]
+            self.showvideo_selected_row(uuidlist)
+            ##数据插入成功就会出现这个
             self.stacked_pages.setCurrentIndex(4)
             return
 
+
         try:
-            self.dtw_obj.setparam(jsonpath1,jsonpath2,combine_mp4uuid,combine_jsonuuid)
+            self.dtw_obj.setparam(jsonpath1,jsonpath2,self.combine_mp4uuid,self.combine_jsonuuid)
             self.dtw_obj.readjson()
-            self.dtw_obj.dwt_keypoints()
-            # self.dtw_obj.finsh_signal.connect()
-            self.statusBar().showMessage("数据处理完成",5000)
+            self.statusBar().showMessage("关键点数据对比中请稍等。。。")
+            self.dtw_obj.start()
 
-            action = self.videorecord_page_obj.lineEdit.text() + "," + self.videorecord_page_obj.lineEdit_5.text()
-            timestamp = datetime.now().strftime("%Y-%m-%d  %H:%M:%S")
-            query = QSqlQuery()
-            # 插入数据
-            query.prepare("INSERT INTO comparehistory (uuidstandard, uuidcontrast, action,time) VALUES (?, ?, ?, ?)")
-            query.addBindValue(uuid1)
-            query.addBindValue(uuid2)
-            query.addBindValue(action)
-            query.addBindValue(timestamp)
 
-            """
-            编写dtw 对比俩个视频中关键点的差异给出结论
-            """
-
-            if not query.exec():
-                print("插入失败:", query.lastError().text())
-            else:
-                print("插入成功一条对比数据")
-                self.statusBar().showMessage("数据插入成功", 5000)
-
-                self.lyVideoPlayer_obj3.setrtsp(combine_mp4uuid)
-                ##数据插入成功就会出现这个
-                self.stacked_pages.setCurrentIndex(4)
+            # self.dtw_obj.dwt_keypoints()
+            ## self.dtw_obj.finsh_signal.connect()
+            # self.statusBar().showMessage("数据处理完成",5000)
+            # action = self.videorecord_page_obj.lineEdit.text() + "," + self.videorecord_page_obj.lineEdit_5.text()
+            # timestamp = datetime.now().strftime("%Y-%m-%d  %H:%M:%S")
+            # query = QSqlQuery()
+            # # 插入数据
+            # query.prepare("INSERT INTO comparehistory (uuidstandard, uuidcontrast, action,time) VALUES (?, ?, ?, ?)")
+            # query.addBindValue(uuid1)
+            # query.addBindValue(uuid2)
+            # query.addBindValue(action)
+            # query.addBindValue(timestamp)
+            #
+            # """
+            # 编写dtw 对比俩个视频中关键点的差异给出结论
+            # """
+            #
+            # if not query.exec():
+            #     print("插入失败:", query.lastError().text())
+            # else:
+            #     print("插入成功一条对比数据")
+            #     self.statusBar().showMessage("数据插入成功", 5000)
+            #
+            #     self.lyVideoPlayer_obj3.setrtsp(combine_mp4uuid)
+            #     ##数据插入成功就会出现这个
+            #     self.stacked_pages.setCurrentIndex(4)
 
         except Exception as e:
             print(e)
 
+
+    def save_data_history(self):
+        self.statusBar().showMessage("关键点数据对比完成",6000)
+
+        action = self.videorecord_page_obj.lineEdit.text() + "," + self.videorecord_page_obj.lineEdit_5.text()
+        timestamp = datetime.now().strftime("%Y-%m-%d  %H:%M:%S")
+        historyquery = QSqlQuery()
+        # 插入数据
+        historyquery.prepare(
+            "INSERT INTO comparehistory (uuidstandard, uuidcontrast, action,time) VALUES (?, ?, ?, ?)")
+        historyquery.addBindValue(self.standard_uuid1)
+        historyquery.addBindValue(self.constract_uuid2)
+        historyquery.addBindValue(action)
+        historyquery.addBindValue(timestamp)
+
+        """
+        编写dtw 对比俩个视频中关键点的差异给出结论
+        """
+
+        if not historyquery.exec():
+            print("插入失败:", historyquery.lastError().text())
+        else:
+            print("插入成功一条对比数据")
+            self.statusBar().showMessage("数据插入成功", 5000)
+            uuidlist = [self.combine_mp4uuid,self.combine_jsonuuid,self.standard_uuid1,self.constract_uuid2]
+            self.showvideo_selected_row(uuidlist)
+            ##数据插入成功就会出现这个
+            self.stacked_pages.setCurrentIndex(4)
+        pass
 
     def set_main_ui_time(self):
         self.timer = QTimer(self)
@@ -882,7 +920,7 @@ class MainWindow(QMainWindow):
         self.statusBar().showMessage("开始测评")
 
     def showvideo_selected_row(self,uuidlist):
-        # boradvideo,jsonpath,uuid1,uuid2 合并之后视频地址,和组合的frameid
+        # boradvideo,jsonpath,uuid1,uuid2 合并之后视频地址,合成之后json,和组合的frameid
         self.lyVideoPlayer_obj3.setrtsp(uuidlist[0])
         self.lyVideoPlayer_obj3.setcombinejson(uuidlist[1],uuidlist[2],uuidlist[3])
         self.lyVideoPlayer_obj3.setstorepath(self.configresult['ly']['video_path'])
