@@ -449,6 +449,8 @@ class MainWindow(QMainWindow):
         # dtw 对比完之后 就要开始做相关的处理了
         self.dtw_obj.finished.connect(self.save_data_history)
 
+        #发送解析完之后的参数
+        self.lyVideoPlayer_obj3.paramstr_signal.connect(lambda data: self.history_page_obj.textEdit.setText(data))
 
         # 第二个视频+播放按钮
         # self.lyVideoPlayer_obj2.pushButton_3

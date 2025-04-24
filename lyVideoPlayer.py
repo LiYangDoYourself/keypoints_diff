@@ -182,6 +182,7 @@ class lyVideoStreamThread(QThread):
 class lyVideoPlayer(QWidget):
     my_signal = pyqtSignal(dict)
     uuid_signal = pyqtSignal(str)
+    paramstr_signal = pyqtSignal(str)
     def __init__(self, parent=None):
         super().__init__(parent)
 
@@ -252,7 +253,7 @@ class lyVideoPlayer(QWidget):
             self.pushButton_4,
             self.pushButton_5,
             self.pushButton_6,
-            self.pushButton_7,
+            #self.pushButton_7,
             self.pushButton_8,
             self.pushButton_9
         ]
@@ -437,6 +438,13 @@ class lyVideoPlayer(QWidget):
                 norm1 = self.normalize_keypoints(kp1[5:17])
                 norm2 = self.normalize_keypoints(kp2[5:17])
                 structure_diff = np.linalg.norm(norm1 - norm2)
+
+                paramstr = ""
+                paramstr+=f"整体结构差异:{structure_diff}\n"
+                paramstr+=f"角度差（左臂、右臂、左腿、右腿、躯干角度差（脖子→髋部）:{angle_diff}\n"
+                paramstr+=f"平均欧氏距离:{mean_distance}\n"
+                paramstr+=f"平均角度差:{np.mean(angle_diff)}\n"
+                self.paramstr_signal.emit(paramstr)
 
                 print("整体结构差异:", structure_diff)
                 print("角度差（左臂、右臂、左腿、右腿、躯干角度差（脖子→髋部）:", angle_diff)
