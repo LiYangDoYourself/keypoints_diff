@@ -13,6 +13,7 @@ from lyAiDetect import *
 
 import numpy as np
 
+from datetime import datetime
 
 #取视频流的地址
 class lyVideoStreamThread(QThread):
@@ -85,8 +86,8 @@ class lyVideoStreamThread(QThread):
                         continue
 
                     if ret:
+                        self.sendframeindex_signal.emit(self.frame_index)
                         self.matdict_signal.emit({self.frame_index:frame})
-
                         # 是真的就开启录制 ，并处AI处理
                         if(self._flag_startrecord):
                             if self._timeflag==0:
@@ -383,12 +384,83 @@ class lyVideoPlayer(QWidget):
 
     # ========== 姿态结构归一化对比 ==========
     def normalize_keypoints(self,kp):
-        origin = (kp[0]+kp[1])/2  # 肩膀中间
+        # origin = (kp[0]+kp[1])/2  # 肩膀中间
+        rect = cv2.minAreaRect(kp.astype(np.float32))  # 保证输入类型正确
+        origin = np.array(rect[0])  # 中心点 (x, y)
+
         kp = kp - origin
         scale = np.linalg.norm(kp)
         return kp / (scale + 1e-8)
 
+    def generate_pose_report_to_file(self,structure_diff, angle_diffs, euclidean_distance, avg_angle_diff,
+                                     filename="pose_report.txt"):
+        parts = ['左臂', '右臂', '左腿', '右腿', '躯干']
+        angle_comment = ""
+        for part, angle in zip(parts, angle_diffs):
+            if angle < 10:
+                level = "高度一致"
+            elif angle < 25:
+                level = "轻微差异"
+            elif angle < 45:
+                level = "中等差异"
+            else:
+                level = "明显偏差"
+            angle_comment += f"  - {part}角度差：{angle:.2f}°（{level}）\n"
 
+        structure_eval = (
+            "结构极为接近，动作表现高度一致" if structure_diff > 0.9 else
+            "结构大体相似，但存在一点差异" if structure_diff > 0.5 else
+            "结构有所差异"
+        )
+
+        distance_eval = (
+            "位置对齐良好，关键点分布接近" if euclidean_distance < 100 else
+            "关键点略有偏移" if euclidean_distance < 200 else
+            "关键点偏移显著，可能存在定位误差或动作差异"
+        )
+
+        angle_diff_eval = (
+            "整体关节运动相似，姿态协调性良好" if avg_angle_diff < 10 else
+            "存在一定动作差异，建议注意肢体角度控制" if avg_angle_diff < 25 else
+            "角度差异较大，需重点纠正动作姿态"
+        )
+
+        worst_part = parts[angle_diffs.index(max(angle_diffs))]
+
+        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        report = f"""🔍 动作相似性分析报告
+    生成时间：{now}
+
+    1. 整体结构分析
+       - 结构相似值：{structure_diff:.4f}
+       - 评价：{structure_eval}
+
+    2. 关键关节角度差异
+    {angle_comment}
+
+    3. 平均欧氏距离
+       - 距离：{euclidean_distance:.2f}px
+       - 评价：{distance_eval}
+
+    4. 平均角度差异
+       - 平均角度差：{avg_angle_diff:.2f}°
+       - 评价：{angle_diff_eval}
+       
+    🧠 综合建议：
+        > 主要动作差异集中在“{worst_part}”，建议针对该部位进行专项训练或校正；
+        > 总体来看，结构{structure_eval.replace("结构", "")}，但部分关键点存在位置或角度偏差。
+        > 推荐根据报告中的具体部位差异制定纠正动作计划。
+
+      
+    —— End of Report —
+    """
+
+        with open(filename, "w", encoding="utf-8") as f:
+            f.write(report)
+
+        print(f"✅ 分析报告已保存为：{filename}")
+
+        return report
     #回传相关的对比数据
     def get_frameid_deal(self,frameid):
         try:
@@ -438,9 +510,12 @@ class lyVideoPlayer(QWidget):
                 norm1 = self.normalize_keypoints(kp1[5:17])
                 norm2 = self.normalize_keypoints(kp2[5:17])
                 structure_diff = np.linalg.norm(norm1 - norm2)
+                structure_similarity = np.exp(-structure_diff)
+
 
                 paramstr = ""
-                paramstr+=f"整体结构差异:{structure_diff}\n"
+                # paramstr+=f"整体结构差异:{structure_diff}\n"
+                paramstr+=f"整体结构相似性:{structure_similarity}\n"
                 paramstr+=f"角度差（左臂、右臂、左腿、右腿、躯干角度差（脖子→髋部）:{angle_diff}\n"
                 paramstr+=f"平均欧氏距离:{mean_distance}\n"
                 paramstr+=f"平均角度差:{np.mean(angle_diff)}\n"
@@ -450,6 +525,11 @@ class lyVideoPlayer(QWidget):
                 print("角度差（左臂、右臂、左腿、右腿、躯干角度差（脖子→髋部）:", angle_diff)
                 print("平均欧氏距离:", mean_distance)
                 print("平均角度差:", np.mean(angle_diff))
+
+                # paramstr = self.generate_pose_report_to_file(structure_similarity, angle_diff.tolist(), mean_distance, np.mean(angle_diff))
+                # print(paramstr)
+                # self.paramstr_signal.emit(paramstr)
+
 
         except Exception as e:
             print(e)

@@ -4,6 +4,9 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
+from matplotlib import rcParams
+rcParams['font.family'] = 'SimHei'
+rcParams['axes.unicode_minus'] = False
 
 import cv2
 # 示例骨架连接定义（你可以换成你自己项目的）
@@ -73,7 +76,8 @@ def plot_enlarged_pose_pair(kps1, kps2,i,j, scale=2.5, save=False,return_image=F
     kps1_show = normalize_and_scale_kps(kps1, scale=scale)
     kps2_show = normalize_and_scale_kps(kps2, scale=scale)
 
-    for ax, kps, color, title in zip([ax1, ax2], [kps1_show, kps2_show], ['red', 'blue'], [f'Video1_{i}', f'Video2_{j}']):
+    #[f'Video1_{i}', f'Video2_{j}']
+    for ax, kps, color, title in zip([ax1, ax2], [kps1_show, kps2_show], ['red', 'blue'], [f'标准动作',f'对比动作']):
         draw_pose(ax, kps, SKELETON, ANGLE_JOINTS, color=color)
         ax.set_xlim(0, videowh[0])   #1280
         ax.set_ylim(videowh[1], 0)   #928

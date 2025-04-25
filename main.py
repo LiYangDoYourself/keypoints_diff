@@ -8,8 +8,8 @@ import queue
 
 import uuid
 import cv2
-from PyQt5.QtCore import QTimer, QDateTime, Qt, QThread, pyqtSignal
-from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QStackedWidget, QVBoxLayout, QDesktopWidget
+from PyQt5.QtCore import QTimer, QDateTime, Qt, QThread, pyqtSignal, QThreadPool
+from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QStackedWidget, QVBoxLayout, QDesktopWidget, QToolButton
 from PyQt5.uic import loadUi
 from PyQt5.QtSql import QSqlDatabase, QSqlTableModel, QSqlQueryModel, QSqlQuery
 from PyQt5.QtWidgets import QTableView, QMessageBox
@@ -19,6 +19,8 @@ from lyVideoPlayer import *
 from lyDataBase import DBWidget
 
 from lyDwt import DTW
+
+from lySpeechDetect import VoiceSignals,VoskVoiceWorker
 
 # from ultralytics import YOLO
 # model_detect = YOLO("best.pt")   # yolov8-x6-pose.pt
@@ -261,6 +263,11 @@ class VideoStreamThread(QThread):
         self.end_time = 0
 
 
+class IconButton(QToolButton):
+    def mouseDoubleClickEvent(self, event):
+        print("按钮被双击！")
+
+
 class MainWindow(QMainWindow):
     startrecord_signal = pyqtSignal()
     stoprecord_signal = pyqtSignal()
@@ -452,13 +459,23 @@ class MainWindow(QMainWindow):
         #发送解析完之后的参数
         self.lyVideoPlayer_obj3.paramstr_signal.connect(lambda data: self.history_page_obj.textEdit.setText(data))
 
-        # 第二个视频+播放按钮
-        # self.lyVideoPlayer_obj2.pushButton_3
-        #
+
+        #语音识别 发出开始录制和结束录制
+        self.threadpool = QThreadPool()
+        self.voice_worker = VoskVoiceWorker()
+        self.voice_worker.signals.startRecording.connect(self.start_video_record)
+        self.voice_worker.signals.stopRecording.connect(self.stop_video_record)
+        # 启动语音识别
+        # self.threadpool.start(self.voice_worker)
+
+
 
         # 隐藏导入
         self.videorecord_page_obj.pushButton_import.hide()
         self.videorecord_page_obj.toolButton.hide()
+
+        self.lyVideoPlayer_obj2.pushButton_2.hide()
+        self.lyVideoPlayer_obj2.pushButton_9.hide()
 
     def transfer_page(self):
         tmpbtn = self.sender()
@@ -932,6 +949,7 @@ class MainWindow(QMainWindow):
     def closeEvent(self, event):
             self.stream_thread.stop()
             self.frameAI_thread.stop()
+            self.voice_worker.stop()
             event.accept()
 
 

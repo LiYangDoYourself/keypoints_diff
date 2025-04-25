@@ -51,6 +51,11 @@ class VideoPlayer(QWidget):
                 QImage.Format_RGB888
             )
             painter.drawImage(scaled_rect, qimage)
+            self.frame=[]
+        else:
+            painter.fillRect(self.rect(), Qt.black)
+
+
 
             # 绘制边框（保留1像素内边距）
         border_rect = QRect(0, 0, self.width() - 1, self.height() - 1)

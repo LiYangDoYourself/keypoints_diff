@@ -50,7 +50,7 @@ class VoskVoiceWorker(QRunnable):
 
     def stop(self):
         self.running = False
-        self.quit()
+        #self.quit()
         # self.wait()
 
 class MainWindow(QWidget):
