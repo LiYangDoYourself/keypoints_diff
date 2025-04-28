@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 # author: liyang
 # time: 2025/4/17 10:21
+import sys
+from PyQt5.QtWidgets import QApplication
 import time
 
 from PyQt5.QtCore import pyqtSignal, QRect, QSize, Qt, QThread
@@ -298,6 +300,7 @@ class lyVideoPlayer(QWidget):
             self.videostream_thread.resume()
     def stop_videoborad(self):
 
+        QApplication.processEvents()
         if self.videostream_thread.isRunning():
             self.videostream_thread.stop()
 
@@ -448,7 +451,7 @@ class lyVideoPlayer(QWidget):
        
     🧠 综合建议：
         > 主要动作差异集中在“{worst_part}”，建议针对该部位进行专项训练或校正；
-        > 总体来看，结构{structure_eval.replace("结构", "")}，但部分关键点存在位置或角度偏差。
+        > 总体来看，结构{structure_eval.replace("结构", "")}。
         > 推荐根据报告中的具体部位差异制定纠正动作计划。
 
       
@@ -513,22 +516,22 @@ class lyVideoPlayer(QWidget):
                 structure_similarity = np.exp(-structure_diff)
 
 
-                paramstr = ""
-                # paramstr+=f"整体结构差异:{structure_diff}\n"
-                paramstr+=f"整体结构相似性:{structure_similarity}\n"
-                paramstr+=f"角度差（左臂、右臂、左腿、右腿、躯干角度差（脖子→髋部）:{angle_diff}\n"
-                paramstr+=f"平均欧氏距离:{mean_distance}\n"
-                paramstr+=f"平均角度差:{np.mean(angle_diff)}\n"
-                self.paramstr_signal.emit(paramstr)
-
-                print("整体结构差异:", structure_diff)
-                print("角度差（左臂、右臂、左腿、右腿、躯干角度差（脖子→髋部）:", angle_diff)
-                print("平均欧氏距离:", mean_distance)
-                print("平均角度差:", np.mean(angle_diff))
-
-                # paramstr = self.generate_pose_report_to_file(structure_similarity, angle_diff.tolist(), mean_distance, np.mean(angle_diff))
-                # print(paramstr)
+                # paramstr = ""
+                # # paramstr+=f"整体结构差异:{structure_diff}\n"
+                # paramstr+=f"整体结构相似性:{structure_similarity}\n"
+                # paramstr+=f"角度差（左臂、右臂、左腿、右腿、躯干角度差（脖子→髋部）:{angle_diff}\n"
+                # paramstr+=f"平均欧氏距离:{mean_distance}\n"
+                # paramstr+=f"平均角度差:{np.mean(angle_diff)}\n"
                 # self.paramstr_signal.emit(paramstr)
+                #
+                # print("整体结构差异:", structure_diff)
+                # print("角度差（左臂、右臂、左腿、右腿、躯干角度差（脖子→髋部）:", angle_diff)
+                # print("平均欧氏距离:", mean_distance)
+                # print("平均角度差:", np.mean(angle_diff))
+
+                paramstr = self.generate_pose_report_to_file(structure_similarity, angle_diff.tolist(), mean_distance, np.mean(angle_diff))
+                print(paramstr)
+                self.paramstr_signal.emit(paramstr)
 
 
         except Exception as e:
@@ -537,8 +540,7 @@ class lyVideoPlayer(QWidget):
 
 
 if __name__ == '__main__':
-    import sys
-    from PyQt5.QtWidgets import QApplication
+
     app = QApplication(sys.argv)
     window = lyVideoPlayer()
     window.show()

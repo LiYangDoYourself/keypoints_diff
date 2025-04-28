@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>830</width>
-    <height>398</height>
+    <width>1041</width>
+    <height>678</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -18,38 +18,318 @@
 color: rgb(255, 255, 255);
 font: 14pt &quot;Agency FB&quot;;</string>
   </property>
-  <layout class="QHBoxLayout" name="horizontalLayout_3" stretch="1,4">
+  <layout class="QVBoxLayout" name="verticalLayout_7">
    <item>
-    <layout class="QVBoxLayout" name="verticalLayout_3">
+    <layout class="QVBoxLayout" name="verticalLayout_6" stretch="4,3">
      <item>
-      <widget class="QWidget" name="widget_2" native="true"/>
-     </item>
-    </layout>
-   </item>
-   <item>
-    <layout class="QVBoxLayout" name="verticalLayout_4" stretch="15,3">
-     <item>
-      <layout class="QVBoxLayout" name="verticalLayout_2">
+      <layout class="QHBoxLayout" name="horizontalLayout" stretch="1,20,5,1">
        <item>
-        <widget class="QWidget" name="widget" native="true">
-         <property name="styleSheet">
-          <string notr="true">background-color: rgb(0, 0, 0);</string>
-         </property>
-        </widget>
+        <layout class="QVBoxLayout" name="verticalLayout_3">
+         <item>
+          <widget class="QWidget" name="widget_2" native="true"/>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <layout class="QVBoxLayout" name="verticalLayout_2">
+         <item>
+          <widget class="QWidget" name="widget" native="true">
+           <property name="styleSheet">
+            <string notr="true">background-color: rgb(0, 0, 0);</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <layout class="QVBoxLayout" name="verticalLayout_4">
+         <item>
+          <widget class="QTextEdit" name="textEdit"/>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <layout class="QVBoxLayout" name="verticalLayout_5">
+         <item>
+          <widget class="QTabWidget" name="tabWidget_2">
+           <property name="styleSheet">
+            <string notr="true">background-color: rgb(255, 255, 255);
+color: rgb(0, 0, 0);</string>
+           </property>
+           <property name="currentIndex">
+            <number>0</number>
+           </property>
+           <widget class="QWidget" name="tab_3">
+            <attribute name="title">
+             <string>关注部位</string>
+            </attribute>
+            <layout class="QVBoxLayout" name="verticalLayout_10">
+             <item>
+              <layout class="QGridLayout" name="gridLayout_3" rowstretch="0,0,0">
+               <item row="0" column="1">
+                <widget class="QCheckBox" name="checkBox_leftbigarm">
+                 <property name="text">
+                  <string>左大臂</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="0" column="0">
+                <widget class="QCheckBox" name="checkBox_body">
+                 <property name="text">
+                  <string>躯干</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="0" column="2">
+                <widget class="QCheckBox" name="checkBox_leftsmallarm">
+                 <property name="text">
+                  <string>左小臂</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="1" column="0">
+                <widget class="QCheckBox" name="checkBox_rightbigarm">
+                 <property name="text">
+                  <string>右大臂</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="1" column="1">
+                <widget class="QCheckBox" name="checkBox_rightsmallarm">
+                 <property name="text">
+                  <string>右小臂</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="1" column="2">
+                <widget class="QCheckBox" name="checkBox_leftbigleg">
+                 <property name="text">
+                  <string>左大腿</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="2" column="2">
+                <widget class="QCheckBox" name="checkBox_rightsmallleg">
+                 <property name="text">
+                  <string>右小腿</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="2" column="0">
+                <widget class="QCheckBox" name="checkBox_leftsmallleg">
+                 <property name="text">
+                  <string>左小腿</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="2" column="1">
+                <widget class="QCheckBox" name="checkBox_rightbigleg">
+                 <property name="text">
+                  <string>右大腿</string>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </item>
+            </layout>
+           </widget>
+          </widget>
+         </item>
+        </layout>
        </item>
       </layout>
      </item>
      <item>
-      <layout class="QHBoxLayout" name="horizontalLayout_2">
+      <layout class="QVBoxLayout" name="verticalLayout">
        <item>
-        <widget class="QLabel" name="label_2">
-         <property name="text">
-          <string>对比说明</string>
+        <widget class="QTabWidget" name="tabWidget">
+         <property name="autoFillBackground">
+          <bool>false</bool>
          </property>
+         <property name="styleSheet">
+          <string notr="true">background-color: rgb(0, 0, 127);
+color: rgb(0, 0, 0);
+
+</string>
+         </property>
+         <property name="currentIndex">
+          <number>0</number>
+         </property>
+         <property name="documentMode">
+          <bool>true</bool>
+         </property>
+         <property name="tabsClosable">
+          <bool>false</bool>
+         </property>
+         <property name="tabBarAutoHide">
+          <bool>false</bool>
+         </property>
+         <widget class="QWidget" name="tab">
+          <property name="layoutDirection">
+           <enum>Qt::LeftToRight</enum>
+          </property>
+          <property name="styleSheet">
+           <string notr="true">QTabBar::tab {
+    background: lightgray;
+    padding: 10px;
+    border: 1px solid gray;
+    border-bottom: none;
+}
+
+QTabBar::tab:selected {
+    background: white;
+    color: blue;
+    font-weight: bold;
+}
+
+QTabBar::tab:hover {
+    background: #d0d0d0;
+}
+</string>
+          </property>
+          <attribute name="title">
+           <string>匹配之前</string>
+          </attribute>
+          <layout class="QGridLayout" name="gridLayout">
+           <item row="0" column="0">
+            <widget class="lyChartView" name="widget_body" native="true">
+             <property name="enabled">
+              <bool>true</bool>
+             </property>
+             <property name="styleSheet">
+              <string notr="true">background-color: rgb(0, 0, 127);</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="1">
+            <widget class="lyChartView" name="widget_leftbigarm" native="true">
+             <property name="styleSheet">
+              <string notr="true">background-color: rgb(0, 0, 127);</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="2">
+            <widget class="lyChartView" name="widget_leftsmallarm" native="true">
+             <property name="styleSheet">
+              <string notr="true">background-color: rgb(0, 0, 127);</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="3">
+            <widget class="lyChartView" name="widget_rightbigarm" native="true">
+             <property name="styleSheet">
+              <string notr="true">background-color: rgb(0, 0, 127);</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="4">
+            <widget class="lyChartView" name="widget_rightsmallarm" native="true">
+             <property name="styleSheet">
+              <string notr="true">background-color: rgb(0, 0, 127);</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="0">
+            <widget class="lyChartView" name="widget_leftbigleg" native="true">
+             <property name="styleSheet">
+              <string notr="true">background-color: rgb(0, 0, 127);</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="1">
+            <widget class="lyChartView" name="widget_leftsmallleg" native="true">
+             <property name="styleSheet">
+              <string notr="true">background-color: rgb(0, 0, 127);</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="2">
+            <widget class="lyChartView" name="widget_rightbigleg" native="true">
+             <property name="styleSheet">
+              <string notr="true">background-color: rgb(0, 0, 127);</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="3">
+            <widget class="lyChartView" name="widget_rightsmallleg" native="true">
+             <property name="styleSheet">
+              <string notr="true">background-color: rgb(0, 0, 127);</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+         <widget class="QWidget" name="tab_2">
+          <attribute name="title">
+           <string>匹配之后</string>
+          </attribute>
+          <layout class="QGridLayout" name="gridLayout_2">
+           <item row="0" column="0">
+            <widget class="lyChartView" name="widget_body1" native="true">
+             <property name="styleSheet">
+              <string notr="true">background-color: rgb(0, 0, 127);</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="1">
+            <widget class="lyChartView" name="widget_leftbigarm1" native="true">
+             <property name="styleSheet">
+              <string notr="true">background-color: rgb(0, 0, 127);</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="2">
+            <widget class="lyChartView" name="widget_leftsmallarm1" native="true">
+             <property name="styleSheet">
+              <string notr="true">background-color: rgb(0, 0, 127);</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="3">
+            <widget class="lyChartView" name="widget_rightbigarm1" native="true">
+             <property name="styleSheet">
+              <string notr="true">background-color: rgb(0, 0, 127);</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="4">
+            <widget class="lyChartView" name="widget_rightsmallarm1" native="true">
+             <property name="styleSheet">
+              <string notr="true">background-color: rgb(0, 0, 127);</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="0">
+            <widget class="lyChartView" name="widget_leftbigleg1" native="true">
+             <property name="styleSheet">
+              <string notr="true">background-color: rgb(0, 0, 127);</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="1">
+            <widget class="lyChartView" name="widget_leftsmallleg1" native="true">
+             <property name="styleSheet">
+              <string notr="true">background-color: rgb(0, 0, 127);</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="2">
+            <widget class="lyChartView" name="widget_rightbigleg1" native="true">
+             <property name="styleSheet">
+              <string notr="true">background-color: rgb(0, 0, 127);</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="3">
+            <widget class="lyChartView" name="widget_rightsmallleg1" native="true">
+             <property name="styleSheet">
+              <string notr="true">background-color: rgb(0, 0, 127);</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
         </widget>
-       </item>
-       <item>
-        <widget class="QTextEdit" name="textEdit"/>
        </item>
       </layout>
      </item>
@@ -57,6 +337,14 @@ font: 14pt &quot;Agency FB&quot;;</string>
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>lyChartView</class>
+   <extends>QWidget</extends>
+   <header>lyChartView.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

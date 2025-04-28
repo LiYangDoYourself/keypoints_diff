@@ -22,6 +22,8 @@ from lyDwt import DTW
 
 from lySpeechDetect import VoiceSignals,VoskVoiceWorker
 
+# from lyChartView import lyChartView
+
 # from ultralytics import YOLO
 # model_detect = YOLO("best.pt")   # yolov8-x6-pose.pt
 #
@@ -263,11 +265,6 @@ class VideoStreamThread(QThread):
         self.end_time = 0
 
 
-class IconButton(QToolButton):
-    def mouseDoubleClickEvent(self, event):
-        print("按钮被双击！")
-
-
 class MainWindow(QMainWindow):
     startrecord_signal = pyqtSignal()
     stoprecord_signal = pyqtSignal()
@@ -276,6 +273,7 @@ class MainWindow(QMainWindow):
 
     def __init__(self):
         super(MainWindow, self).__init__()
+        self.setWindowTitle("人体关键点对比软件")
         self.screen_rect = QApplication.primaryScreen().geometry()
         self.statusBar().show()
 
@@ -310,12 +308,51 @@ class MainWindow(QMainWindow):
         # dwt对象
         self.dtw_obj = DTW()
 
+
+
         loadUi('main_page.ui', self.main_page_obj)
         loadUi('config_page.ui', self.config_page_obj)
         loadUi('main_return.ui',self.main_return_obj)
         loadUi('videorecord_page.ui',self.videorecord_page_obj)
         loadUi('videocompare_page.ui',self.videocompare_page_obj)
         loadUi('history_page.ui',self.history_page_obj)
+
+        # 创建18图表的类别窗体
+        self.chart_dict = dict()
+        self.chart_title = ["躯干", "左大臂", "左小臂", "右大臂", "右小臂", "左大腿", "左小腿", "右大腿", "右小腿"]
+
+        self.chat_series = dict()  # 0:(标准,测试)
+        self.chat_series_name = ["标准", "测试"]
+
+        self.chart_dict[0]=self.history_page_obj.widget_body
+        self.chart_dict[1]=self.history_page_obj.widget_leftbigarm
+        self.chart_dict[2]=self.history_page_obj.widget_leftsmallarm
+        self.chart_dict[3]=self.history_page_obj.widget_rightbigarm
+        self.chart_dict[4]=self.history_page_obj.widget_rightsmallarm
+        self.chart_dict[5]=self.history_page_obj.widget_leftbigleg
+        self.chart_dict[6]=self.history_page_obj.widget_leftsmallleg
+        self.chart_dict[7]=self.history_page_obj.widget_rightbigleg
+        self.chart_dict[8]=self.history_page_obj.widget_rightsmallleg
+
+        self.chart_dict[9] = self.history_page_obj.widget_body1
+        self.chart_dict[10] = self.history_page_obj.widget_leftbigarm1
+        self.chart_dict[11] = self.history_page_obj.widget_leftsmallarm1
+        self.chart_dict[12] = self.history_page_obj.widget_rightbigarm1
+        self.chart_dict[13] = self.history_page_obj.widget_rightsmallarm1
+        self.chart_dict[14] = self.history_page_obj.widget_leftbigleg1
+        self.chart_dict[15] = self.history_page_obj.widget_leftsmallleg1
+        self.chart_dict[16] = self.history_page_obj.widget_rightbigleg1
+        self.chart_dict[17] = self.history_page_obj.widget_rightsmallleg1
+
+
+        for i in range(0, 18):
+            # self.chart_dict[i] = lyChartView(self.chart_title[(i%9)])
+            # 添加曲线
+            self.chart_dict[i].settitlename(self.chart_title[(i%9)])
+            temp_series = self.chart_dict[i].add_series(self.chat_series_name[0], Qt.red)
+            hum_series = self.chart_dict[i].add_series(self.chat_series_name[1], Qt.blue)
+            self.chat_series[i] = (temp_series, hum_series)
+
 
         # 添加到容器
         self.stacked_pages.addWidget(self.main_page_obj)   # 0 主页
@@ -463,11 +500,22 @@ class MainWindow(QMainWindow):
         #语音识别 发出开始录制和结束录制
         self.threadpool = QThreadPool()
         self.voice_worker = VoskVoiceWorker()
-        self.voice_worker.signals.startRecording.connect(self.start_video_record)
-        self.voice_worker.signals.stopRecording.connect(self.stop_video_record)
+        self.voice_worker.signals.startRecording.connect(self.speechAIstartrecored)
+        self.voice_worker.signals.stopRecording.connect(self.speechAIstoprecored)
         # 启动语音识别
         # self.threadpool.start(self.voice_worker)
 
+        # 添加图标显示
+
+        self.history_page_obj.checkBox_body.toggled.connect(self.update_chart)
+        self.history_page_obj.checkBox_leftbigarm.toggled.connect(self.update_chart)
+        self.history_page_obj.checkBox_leftsmallarm.toggled.connect(self.update_chart)
+        self.history_page_obj.checkBox_rightbigarm.toggled.connect(self.update_chart)
+        self.history_page_obj.checkBox_rightsmallarm.toggled.connect(self.update_chart)
+        self.history_page_obj.checkBox_leftbigleg.toggled.connect(self.update_chart)
+        self.history_page_obj.checkBox_leftsmallleg.toggled.connect(self.update_chart)
+        self.history_page_obj.checkBox_rightbigleg.toggled.connect(self.update_chart)
+        self.history_page_obj.checkBox_rightsmallleg.toggled.connect(self.update_chart)
 
 
         # 隐藏导入
@@ -476,6 +524,228 @@ class MainWindow(QMainWindow):
 
         self.lyVideoPlayer_obj2.pushButton_2.hide()
         self.lyVideoPlayer_obj2.pushButton_9.hide()
+
+    def calc_angle(self,pt1, pt2, vertical_ref=[0, -1]):
+        """计算肢体向量与垂直方向的夹角（0-180度）"""
+        limb_vector = np.array([pt2[0] - pt1[0], pt2[1] - pt1[1]])
+        unit_limb = limb_vector / np.linalg.norm(limb_vector)
+
+        dot_product = np.dot(unit_limb, vertical_ref)
+        angle_rad = np.arccos(np.clip(dot_product, -1, 1))
+        return np.degrees(angle_rad)  # 转换为角度
+
+    # 点击控件显示图标
+    def update_chart(self):
+
+        sender = self.sender()
+        if sender == self.history_page_obj.checkBox_body:
+           if(sender.isChecked()):
+              self.history_page_obj.widget_body.hide()
+              self.history_page_obj.widget_body1.hide()
+           else:
+              self.history_page_obj.widget_body.show()
+              self.history_page_obj.widget_body1.show()
+        elif sender == self.history_page_obj.checkBox_leftbigarm:
+            if (sender.isChecked()):
+                self.history_page_obj.widget_leftbigarm.hide()
+                self.history_page_obj.widget_leftbigarm1.hide()
+            else:
+                self.history_page_obj.widget_leftbigarm.show()
+                self.history_page_obj.widget_leftbigarm1.show()
+        elif sender == self.history_page_obj.checkBox_leftsmallarm:
+            if (sender.isChecked()):
+                self.history_page_obj.widget_leftsmallarm.hide()
+                self.history_page_obj.widget_leftsmallarm1.hide()
+            else:
+                self.history_page_obj.widget_leftsmallarm.show()
+                self.history_page_obj.widget_leftsmallarm1.show()
+        elif sender == self.history_page_obj.checkBox_rightbigarm:
+            if (sender.isChecked()):
+                self.history_page_obj.widget_rightbigarm.hide()
+                self.history_page_obj.widget_rightbigarm1.hide()
+            else:
+                self.history_page_obj.widget_rightbigarm.show()
+                self.history_page_obj.widget_rightbigarm1.show()
+        elif sender == self.history_page_obj.checkBox_rightsmallarm:
+            if (sender.isChecked()):
+                self.history_page_obj.widget_rightsmallarm.hide()
+                self.history_page_obj.widget_rightsmallarm1.hide()
+            else:
+                self.history_page_obj.widget_rightsmallarm.show()
+                self.history_page_obj.widget_rightsmallarm1.show()
+        elif sender == self.history_page_obj.checkBox_leftbigleg:
+            if (sender.isChecked()):
+                self.history_page_obj.widget_leftbigleg.hide()
+                self.history_page_obj.widget_leftbigleg1.hide()
+            else:
+                self.history_page_obj.widget_leftbigleg.show()
+                self.history_page_obj.widget_leftbigleg1.show()
+        elif sender == self.history_page_obj.checkBox_leftsmallleg:
+            if (sender.isChecked()):
+                self.history_page_obj.widget_leftsmallleg.hide()
+                self.history_page_obj.widget_leftsmallleg1.hide()
+            else:
+                self.history_page_obj.widget_leftsmallleg.show()
+                self.history_page_obj.widget_leftsmallleg1.show()
+        elif sender == self.history_page_obj.checkBox_rightbigleg:
+            if (sender.isChecked()):
+                self.history_page_obj.widget_rightbigleg.hide()
+                self.history_page_obj.widget_rightbigleg1.hide()
+            else:
+                self.history_page_obj.widget_rightbigleg.show()
+                self.history_page_obj.widget_rightbigleg1.show()
+        elif sender == self.history_page_obj.checkBox_rightsmallleg:
+            if (sender.isChecked()):
+                self.history_page_obj.widget_rightsmallleg.hide()
+                self.history_page_obj.widget_rightsmallleg1.hide()
+            else:
+                self.history_page_obj.widget_rightsmallleg.show()
+                self.history_page_obj.widget_rightsmallleg1.show()
+
+    def adddata_chatview(self,standard_uuid,constarct_uuid):
+
+        for i in range(0,18):
+            self.chart_dict[i].clear_all()
+
+
+        if(len(self.chart_dict)>=18):
+            # self.chart_dict[0].append_data(self.chat_series_name[0],)
+            # self.chart_dict[0].append_data(self.chat_series_name[1],)
+
+            # 原始没有做dtw算法的
+            standard_json = os.path.join(self.configresult["ly"]["video_path"],standard_uuid+".json")
+            constarct_json = os.path.join(self.configresult["ly"]["video_path"],constarct_uuid+".json")
+
+            standard_data=None
+            constract_data=None
+            with open(standard_json, "r") as f:
+                standard_data = json.load(f)
+
+            with open(constarct_json, "r") as f:
+                constract_data=json.load(f)
+
+            BODY_PARTS = {
+                "躯干": [5, 11],  # 假设1:颈部, 2:腰部
+                "左大臂": [5, 7],  # 5:左肩, 7:左肘
+                "左小臂": [7, 9],  # 7:左肘, 9:左手腕
+                "右大臂": [6, 8],  # 6:右肩, 7:右肘
+                "右小臂": [8, 10],  # 8:右肘, 10:右手腕
+                "左大腿": [11, 13],  # 11:左髋, 13:左膝
+                "左小腿": [13, 15],  # 13:左膝, 15:左踝
+                "右大腿": [12, 14],  # 12:右髋, 14:右膝
+                "右小腿": [14, 16]  # 14:右膝, 16:右踝
+            }
+
+            results = {part: [] for part in BODY_PARTS.keys()}
+            results2 = {part: [] for part in BODY_PARTS.keys()}
+            for key,value in standard_data.items():
+
+                if not value or len(value) < 17:
+                    continue  # 如果当前帧没有数据，跳过
+                value17 = value[:17]
+
+
+                for part, indices in BODY_PARTS.items():
+                    pt1 = value17[indices[0]]  # 获取起点坐标
+                    pt2 = value17[indices[1]]  # 获取终点坐标
+                    results[part].append(self.calc_angle(pt1, pt2))
+
+            for key,value in constract_data.items():
+                if not value or len(value) < 17:
+                    continue
+
+                value17 = value[:17]
+
+                for part, indices in BODY_PARTS.items():
+                    pt1 = value17[indices[0]]  # 获取起点坐标
+                    pt2 = value17[indices[1]]  # 获取终点坐标
+                    results2[part].append(self.calc_angle(pt1, pt2))
+
+
+            parts = list(BODY_PARTS.keys())
+            num_parts = len(parts)
+
+            # 有了每一个角度值 我们开始画图
+            for chartid,part_name in enumerate(parts):
+                angles = results[part_name]
+                angles2 = results2[part_name]
+
+                for frame_idx,tmpangle in enumerate(angles):
+                    self.chart_dict[chartid].append_data(self.chat_series_name[0],frame_idx,tmpangle)
+
+                for frame_idx,tmpangle in enumerate(angles2):
+                    self.chart_dict[chartid].append_data(self.chat_series_name[1],frame_idx,tmpangle)
+
+
+            #######
+            #######添加对比完之后的数据
+            #######
+            standard_constract_data=None
+            standard_constract_json = os.path.join(self.configresult["ly"]["video_path"],standard_uuid+"-"+constarct_uuid+".json")
+            with open(standard_constract_json, "r") as f:
+                standard_constract_data = json.load(f)
+
+            # [[0,0],[1,2]]
+            matchstandard_result = {part: [] for part in BODY_PARTS.keys()}
+            matchconstract_result = {part: [] for part in BODY_PARTS.keys()}
+            for v1_frame, v2_frame in standard_constract_data:
+                # 注意 key 是字符串类型
+                v1_frame = str(v1_frame)
+                v2_frame = str(v2_frame)
+
+                if v1_frame in standard_data and v2_frame in constract_data:
+                    kp1 = standard_data[v1_frame][0:17]
+                    kp2 = constract_data[v2_frame][0:17]
+
+                    for part, indices in BODY_PARTS.items():
+                        pt1 = kp1[indices[0]]  # 获取起点坐标
+                        pt2 = kp1[indices[1]]  # 获取终点坐标
+                        matchstandard_result[part].append(self.calc_angle(pt1, pt2))
+
+                        pt1 = kp2[indices[0]]
+                        pt2 = kp2[indices[1]]
+                        matchconstract_result[part].append(self.calc_angle(pt1, pt2))
+
+
+            for chartid, part_name in enumerate(parts):
+                angles = matchstandard_result[part_name]
+                angles2 = matchconstract_result[part_name]
+
+                for frame_idx,tmpangle in enumerate(angles):
+                    self.chart_dict[chartid+9].append_data(self.chat_series_name[0],frame_idx,tmpangle)
+
+                for frame_idx,tmpangle in enumerate(angles2):
+                    self.chart_dict[chartid+9].append_data(self.chat_series_name[1],frame_idx,tmpangle)
+
+    # 启动ai语音识别 开始录制 结束录制
+    def show_AImessage(self,data):
+        self.msg = QMessageBox(self)
+        self.msg.setWindowTitle('提示')
+        self.msg.setText(data)
+        self.msg.setStandardButtons(QMessageBox.NoButton)  # 不显示按钮
+        self.msg.show()
+
+        # 2秒后自动关闭
+        QTimer.singleShot(2000, self.msg.close)
+
+    def speechAIstartrecored(self):
+
+        if(self.stacked_pages.currentIndex()==2):
+             self.videorecord_page_obj.startrecord_pushButton.click()
+             self.show_AImessage("开始录制")
+
+        if(self.stacked_pages.currentIndex()==3):
+             self.lyVideoPlayer_obj2.pushButton_3.click()
+             self.show_AImessage("结束录制")
+    def speechAIstoprecored(self):
+        if (self.stacked_pages.currentIndex() == 2):
+            self.videorecord_page_obj.startrecord_pushButton.click()
+            self.show_AImessage("开始录制")
+
+        if self.stacked_pages.currentIndex() == 3:
+            self.lyVideoPlayer_obj2.pushButton_4.click()
+            self.show_AImessage("结束录制")
+
 
     def transfer_page(self):
         tmpbtn = self.sender()
@@ -852,6 +1122,9 @@ class MainWindow(QMainWindow):
             self.stream_thread.start()
             self.statusBar().showMessage("视频正在播放ing")
     def pause_video_board(self):
+
+        # 加上这一句可以强制 页面的刷新 避免存在问题
+        QApplication.processEvents()
         """切换暂停/恢复状态"""
         if self.stream_thread.isRunning():
             self.stream_thread.pause()
@@ -945,6 +1218,8 @@ class MainWindow(QMainWindow):
         self.lyVideoPlayer_obj3.setstorepath(self.configresult['ly']['video_path'])
         self.lyVideoPlayer_obj3.readjsondata()
         self.lyVideoPlayer_obj3.start_videoborad()
+
+        self.adddata_chatview(uuidlist[2],uuidlist[3])
 
     def closeEvent(self, event):
             self.stream_thread.stop()
