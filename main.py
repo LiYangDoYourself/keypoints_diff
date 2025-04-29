@@ -503,7 +503,7 @@ class MainWindow(QMainWindow):
         self.voice_worker.signals.startRecording.connect(self.speechAIstartrecored)
         self.voice_worker.signals.stopRecording.connect(self.speechAIstoprecored)
         # 启动语音识别
-        # self.threadpool.start(self.voice_worker)
+        self.threadpool.start(self.voice_worker)
 
         # 添加图标显示
         self.history_page_obj.checkBox_body.toggled.connect(self.update_chart)
@@ -757,19 +757,19 @@ class MainWindow(QMainWindow):
 
         if(self.stacked_pages.currentIndex()==2):
              self.videorecord_page_obj.startrecord_pushButton.click()
-             self.show_AImessage("开始录制")
+             # self.show_AImessage("开始录制")
 
         if(self.stacked_pages.currentIndex()==3):
              self.lyVideoPlayer_obj2.pushButton_3.click()
-             self.show_AImessage("结束录制")
+             # self.show_AImessage("结束录制")
     def speechAIstoprecored(self):
         if (self.stacked_pages.currentIndex() == 2):
-            self.videorecord_page_obj.startrecord_pushButton.click()
-            self.show_AImessage("开始录制")
+            self.videorecord_page_obj.stoprecord_pushButton.click()
+            # self.show_AImessage("开始录制")
 
-        if self.stacked_pages.currentIndex() == 3:
+        if (self.stacked_pages.currentIndex()) == 3:
             self.lyVideoPlayer_obj2.pushButton_4.click()
-            self.show_AImessage("结束录制")
+            # self.show_AImessage("结束录制")
 
 
     def transfer_page(self):
@@ -1162,6 +1162,7 @@ class MainWindow(QMainWindow):
     def start_video_record(self):
         if not self.frameAI_thread.isRunning() and self.stream_thread.isRunning():
             if self.videorecord_page_obj.startrecord_pushButton.isEnabled():
+                self.videorecord_page_obj.time_label.setText("录制时间00:00")
                 self.videorecord_page_obj.startrecord_pushButton.setEnabled(False)
                 self.stream_thread.setstartrecord()
                 print("启动视频录制和AI处理")

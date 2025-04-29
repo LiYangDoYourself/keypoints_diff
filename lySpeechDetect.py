@@ -34,7 +34,7 @@ class VoskVoiceWorker(QRunnable):
             data = stream.read(4000, exception_on_overflow=False)
             if rec.AcceptWaveform(data):
                 result = json.loads(rec.Result())
-                text = result.get("text", "")
+                text = result.get("text", "").replace(" ", "")
                 print("识别结果：", text)
 
                 if "开始录制" in text:
@@ -84,6 +84,20 @@ class MainWindow(QWidget):
         self.label.setText("🎙️ 已停止语音监听")
 
 if __name__ == '__main__':
+
+    p = pyaudio.PyAudio()
+
+    print("可用的音频设备列表：")
+    for i in range(p.get_device_count()):
+        info = p.get_device_info_by_index(i)
+        print(f"设备编号: {i}")
+        print(f"名称: {info['name']}")
+        print(f"输入通道数: {info['maxInputChannels']}")
+        print(f"输出通道数: {info['maxOutputChannels']}")
+        print("-" * 40)
+
+    p.terminate()
+
     app = QApplication(sys.argv)
     win = MainWindow()
     win.show()
