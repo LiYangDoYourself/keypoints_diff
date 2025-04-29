@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 from matplotlib import rcParams
+import matplotlib
+matplotlib.use('Agg')
 rcParams['font.family'] = 'SimHei'
 rcParams['axes.unicode_minus'] = False
 

@@ -457,13 +457,13 @@ class MainWindow(QMainWindow):
         # 第二个录制的要开启AI检测的
         self.lyVideoPlayer_obj2.setflag_startai()
 
-        # 历史页面添加 播放器 和 数据库
+        # 历史页面添加播放器和数据库
         layout_3 = QVBoxLayout()
         layout_3.addWidget(self.lyVideoPlayer_obj3)
         self.history_page_obj.widget.setLayout(layout_3)
         self.lyVideoPlayer_obj3.setnextpreflag()
 
-
+        #点击历史数据就触发
         layout_4 = QVBoxLayout()
         layout_4.addWidget(self.database_page_obj)
         self.history_page_obj.widget_2.setLayout(layout_4)
@@ -506,7 +506,6 @@ class MainWindow(QMainWindow):
         # self.threadpool.start(self.voice_worker)
 
         # 添加图标显示
-
         self.history_page_obj.checkBox_body.toggled.connect(self.update_chart)
         self.history_page_obj.checkBox_leftbigarm.toggled.connect(self.update_chart)
         self.history_page_obj.checkBox_leftsmallarm.toggled.connect(self.update_chart)
@@ -517,6 +516,12 @@ class MainWindow(QMainWindow):
         self.history_page_obj.checkBox_rightbigleg.toggled.connect(self.update_chart)
         self.history_page_obj.checkBox_rightsmallleg.toggled.connect(self.update_chart)
 
+        # 录制开始发出信息 结束录制发出信息
+        self.lyVideoPlayer_obj2.start_record_str_signal.connect(lambda info:self.statusBar().showMessage(info))
+        self.lyVideoPlayer_obj2.stop_record_str_signal.connect(lambda info:self.statusBar().showMessage(info))
+
+        #打开视频播放
+        self.videocompare_page_obj.toolButton.clicked.connect(self.openvideo)
 
         # 隐藏导入
         self.videorecord_page_obj.pushButton_import.hide()
@@ -524,6 +529,26 @@ class MainWindow(QMainWindow):
 
         self.lyVideoPlayer_obj2.pushButton_2.hide()
         self.lyVideoPlayer_obj2.pushButton_9.hide()
+
+
+    def openvideo(self):
+        videopath = self.videocompare_page_obj.lineEdit_8.text()
+        cap = cv2.VideoCapture(videopath)
+        if cap.isOpened():
+            fps = cap.get(cv2.CAP_PROP_FPS)
+            cv2.namedWindow("video", 0)
+            while True:
+                if cv2.getWindowProperty("video", cv2.WND_PROP_VISIBLE) < 1:
+                    break
+                ret, frame = cap.read()
+                if (ret):
+                    cv2.imshow("video", frame)
+                    cv2.waitKey(int(1000 / fps))
+                else:
+                    break
+
+            cap.release()
+            cv2.destroyAllWindows()
 
     def calc_angle(self,pt1, pt2, vertical_ref=[0, -1]):
         """计算肢体向量与垂直方向的夹角（0-180度）"""
@@ -906,7 +931,10 @@ class MainWindow(QMainWindow):
             self.showvideo_selected_row(uuidlist)
             ##数据插入成功就会出现这个
             self.stacked_pages.setCurrentIndex(4)
-        pass
+            # 刷新一下添加的历史数据
+            self.database_page_obj.btn_refresh.click()
+
+
 
     def set_main_ui_time(self):
         self.timer = QTimer(self)

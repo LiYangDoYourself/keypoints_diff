@@ -25,7 +25,7 @@ class DBWidget(QWidget):
         self.current_page = 0
         self.total_records = 0
         self.total_pages = 0
-        self.PAGE_SIZE = 2
+        self.PAGE_SIZE = 20
         self.db_path = "keypointdb"
 
         self.current_tablename="comparehistory"
@@ -174,12 +174,22 @@ class DBWidget(QWidget):
         if reply == QMessageBox.Yes:
             model = self.table.model()
             for index in sorted(selected, key=lambda x: x.row(), reverse=True):  # 倒序避免索引错乱
+                # uuid1 = str(model.data(model.index(index.row(), 0)))
+                # uuid2 = str(model.data(model.index(index.row(), 1)))
+                # videoname = uuid1 + "-" + uuid2 + ".mp4"
+                # jsonname = uuid1 + "-" + uuid2 + ".json"
+                # boradvideo = os.path.join(self.video_path, videoname)
+                # jsonpath = os.path.join(self.video_path, jsonname)
+                # if(os.path.exists(boradvideo) or os.path.exists(jsonpath)):
+                #     os.remove(boradvideo)
+                #     os.remove(jsonpath)
                 model.removeRow(index.row())
 
             if isinstance(model, QSqlTableModel):
                 model.submitAll()  # 数据库提交
             self.show_message(" 删除成功", QMessageBox.Information)
             self.load_data()
+
 
     def show_selected_row(self,index):
 

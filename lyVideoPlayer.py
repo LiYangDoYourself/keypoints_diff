@@ -2,7 +2,7 @@
 # author: liyang
 # time: 2025/4/17 10:21
 import sys
-from PyQt5.QtWidgets import QApplication
+from PyQt5.QtWidgets import QApplication, QVBoxLayout, QLabel
 import time
 
 from PyQt5.QtCore import pyqtSignal, QRect, QSize, Qt, QThread
@@ -16,6 +16,20 @@ from lyAiDetect import *
 import numpy as np
 
 from datetime import datetime
+
+# 小提示窗口
+class RecordingDialog(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("提示")
+        self.setWindowFlags(Qt.WindowStaysOnTopHint | Qt.FramelessWindowHint)  # 置顶+无边框
+        self.setFixedSize(200, 100)
+        layout = QVBoxLayout()
+        label = QLabel("正在录制...")
+        label.setAlignment(Qt.AlignCenter)
+        layout.addWidget(label)
+        self.setLayout(layout)
+
 
 #取视频流的地址
 class lyVideoStreamThread(QThread):
@@ -186,6 +200,10 @@ class lyVideoPlayer(QWidget):
     my_signal = pyqtSignal(dict)
     uuid_signal = pyqtSignal(str)
     paramstr_signal = pyqtSignal(str)
+
+    start_record_str_signal =pyqtSignal(str)
+    stop_record_str_signal = pyqtSignal(str)
+
     def __init__(self, parent=None):
         super().__init__(parent)
 
@@ -247,6 +265,10 @@ class lyVideoPlayer(QWidget):
         # 设置相关的参数和需求说明
 
         self.videostream_thread.sendframeindex_signal.connect(self.get_frameid_deal)
+
+        #AI处理完毕之后会发送
+        self.videoframeai_thread.uuid_signal.connect(lambda data:self.stop_record_str_signal.emit("视频处理完毕"))
+
 
         # 按钮列表，方便统一管理
         self.buttons = [
@@ -312,12 +334,22 @@ class lyVideoPlayer(QWidget):
             self.videostream_thread.setstartrecord()
             if not self.videoframeai_thread.isRunning():
                 self.videoframeai_thread.start()
+
+                self.start_record_str_signal.emit("视频正在录制中。。。")
+
+                # self.recording_dialog = RecordingDialog()
+                # self.recording_dialog.show()
+
     def stop_videorecord(self):
 
         if(self.videostream_thread.isRunning()):
             self.videostream_thread.setstoprecord()
             self.videoframeai_thread.stop()
+            self.stop_record_str_signal.emit("等待视频AI处理，请稍等。。。")
 
+            # if self.recording_dialog:
+            #     self.recording_dialog.close()
+            #     self.recording_dialog = None
     def next_frame(self):
 
         if(self.videostream_thread.isRunning() and self.flag_nextpre):

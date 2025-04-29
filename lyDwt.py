@@ -175,10 +175,13 @@ class DTW(QThread):
             # save_pose_video(alignment_path, np.array(self.video_A_raw),np.array(self.video_B_raw),self.combine_uuid)
             save_pose_video(alignment_path, np.array(self.video_A_raw), np.array(self.video_B_raw), self.combine_uuid)
     def run(self) -> None:
-        #启动线程
-        self.dwt_keypoints()
-        if(os.path.exists(self.combine_uuid)):
-            self.finsh_signal.emit()
+        try:
+            #启动线程
+            self.dwt_keypoints()
+            if(os.path.exists(self.combine_uuid)):
+                self.finsh_signal.emit()
+        except Exception as e:
+            print(e)
 
 
 if __name__ == '__main__':

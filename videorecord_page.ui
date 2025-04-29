@@ -178,6 +178,26 @@ border-color: rgb(255, 255, 255);</string>
            <item>
             <layout class="QHBoxLayout" name="horizontalLayout_3">
              <item>
+              <widget class="QPushButton" name="pushButton_3">
+               <property name="styleSheet">
+                <string notr="true">font: 18pt &quot;Agency FB&quot;;</string>
+               </property>
+               <property name="text">
+                <string>播放</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="pushButton_4">
+               <property name="styleSheet">
+                <string notr="true">font: 18pt &quot;Agency FB&quot;;</string>
+               </property>
+               <property name="text">
+                <string>暂停</string>
+               </property>
+              </widget>
+             </item>
+             <item>
               <widget class="QPushButton" name="startrecord_pushButton">
                <property name="styleSheet">
                 <string notr="true">font: 18pt &quot;Agency FB&quot;;</string>
@@ -207,26 +227,6 @@ border-color: rgb(255, 255, 255);</string>
                </property>
                <property name="checkable">
                 <bool>false</bool>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QPushButton" name="pushButton_3">
-               <property name="styleSheet">
-                <string notr="true">font: 18pt &quot;Agency FB&quot;;</string>
-               </property>
-               <property name="text">
-                <string>播放</string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QPushButton" name="pushButton_4">
-               <property name="styleSheet">
-                <string notr="true">font: 18pt &quot;Agency FB&quot;;</string>
-               </property>
-               <property name="text">
-                <string>暂停</string>
                </property>
               </widget>
              </item>

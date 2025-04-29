@@ -111,7 +111,7 @@ color: rgb(255, 255, 255);</string>
          <string notr="true">font: 20pt &quot;Agency FB&quot;;</string>
         </property>
         <property name="text">
-         <string>对比</string>
+         <string>分析</string>
         </property>
        </widget>
       </item>
@@ -136,24 +136,11 @@ color: rgb(255, 255, 255);</string>
      <layout class="QVBoxLayout" name="verticalLayout_4" stretch="1,6">
       <item>
        <layout class="QGridLayout" name="gridLayout_2">
-        <item row="0" column="1">
-         <widget class="QLineEdit" name="lineEdit_5"/>
-        </item>
-        <item row="3" column="0">
-         <widget class="QLabel" name="label_8">
-          <property name="text">
-           <string>视频</string>
-          </property>
-         </widget>
-        </item>
-        <item row="1" column="1">
-         <widget class="QLineEdit" name="lineEdit_6"/>
-        </item>
-        <item row="2" column="1">
-         <widget class="QLineEdit" name="lineEdit_7"/>
-        </item>
         <item row="3" column="1">
          <widget class="QLineEdit" name="lineEdit_8">
+          <property name="readOnly">
+           <bool>true</bool>
+          </property>
           <property name="clearButtonEnabled">
            <bool>false</bool>
           </property>
@@ -163,6 +150,13 @@ color: rgb(255, 255, 255);</string>
          <widget class="QLabel" name="label_5">
           <property name="text">
            <string>动作</string>
+          </property>
+         </widget>
+        </item>
+        <item row="3" column="0">
+         <widget class="QLabel" name="label_8">
+          <property name="text">
+           <string>视频</string>
           </property>
          </widget>
         </item>
@@ -179,6 +173,26 @@ color: rgb(255, 255, 255);</string>
            <string>编号</string>
           </property>
          </widget>
+        </item>
+        <item row="3" column="2">
+         <widget class="QToolButton" name="toolButton">
+          <property name="text">
+           <string>打开</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="1" colspan="2">
+         <widget class="QLineEdit" name="lineEdit_5"/>
+        </item>
+        <item row="1" column="1" colspan="2">
+         <widget class="QLineEdit" name="lineEdit_6">
+          <property name="readOnly">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="1" colspan="2">
+         <widget class="QLineEdit" name="lineEdit_7"/>
         </item>
        </layout>
       </item>
